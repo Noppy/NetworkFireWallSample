@@ -61,13 +61,13 @@ export REGION=$(aws --profile ${PROFILE} configure get region)
 echo "${PROFILE}  ${REGION}"
 ```
 
-## (2)TransitGateway作成
+## (2)TransitGateway
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-Tgw \
     --template-body "file://./src/tgw/tgw.yaml";
 ```
-## (3)SystemB環境作成
+## (3)SystemB環境
 ### (3)-(a) VPC作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
@@ -155,5 +155,20 @@ aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-SystemBVpcInstance \
     --template-body "file://./src/SystemB-Vpc/instance.yaml" \
     --parameters "${CFN_STACK_PARAMETERS}" \
+    --capabilities CAPABILITY_NAMED_IAM ;
+```
+## (4)OutboundVPC環境
+### (3)-(a) Network FireWall Policy作成
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-NwfwPolicies \
+    --template-body "file://./src/Outbound-Vpc/firewall-policy.yaml" ;
+```
+
+### (3)-(b) VPC作成
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-OutboundVpc \
+    --template-body "file://./src/Outbound-Vpc/outbound-vpc.yaml" \
     --capabilities CAPABILITY_NAMED_IAM ;
 ```

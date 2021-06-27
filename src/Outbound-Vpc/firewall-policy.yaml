@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploy Network Firewall policies
+Resources:
+  #------------------ Firewall Policies
+  EgressFirewallPolicy:
+    Type: AWS::NetworkFirewall::FirewallPolicy
+    Properties:
+      FirewallPolicyName: !Sub "${AWS::StackName}-firewall-policy"
+      FirewallPolicy:
+        StatelessDefaultActions:
+          - 'aws:forward_to_sfe'
+        StatelessFragmentDefaultActions:
+          - 'aws:forward_to_sfe'
+        StatefulRuleGroupReferences:
+          - ResourceArn: !Ref DomainAllowStatefulRuleGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-firewall-policy"
+  DomainAllowStatefulRuleGroup:
+    Type: 'AWS::NetworkFirewall::RuleGroup'
+    Properties:
+      RuleGroupName: !Sub "${AWS::StackName}-domain-allow"
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RuleVariables:
+          IPSets:
+            HOME_NET:
+              Definition:
+                - "10.0.0.0/8"
+        RulesSource:
+          RulesSourceList:
+            TargetTypes:
+              - HTTP_HOST
+              - TLS_SNI
+            Targets: 
+              - ".amazon.com"
+              - ".google.co.jp"
+              - ".google.com"
+            GeneratedRulesType: "ALLOWLIST"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-domain-allow"   
+Outputs:
+  #------------------ Managed Prefix
+  EgressFirewallPolicyId:
+    Description: The ID of the EgressFirewallPolicy
+    Value: !GetAtt EgressFirewallPolicy.FirewallPolicyId
+    Export:
+      Name: !Sub ${AWS::StackName}-EgressFirewallPolicyId
+  EgressFirewallPolicyArn:
+    Description: The Arn of the EgressFirewallPolicy
+    Value: !GetAtt EgressFirewallPolicy.FirewallPolicyArn
+    Export:
+      Name: !Sub ${AWS::StackName}-EgressFirewallPolicyArn
