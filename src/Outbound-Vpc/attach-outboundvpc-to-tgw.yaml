@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Attach Outbound-Vpc to TGW
+#----------------------------------------------
+Resources:
+  #----------- for the VPCs Connection TGW
+  AttachVpcToVpcsConnectionTgw:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      TransitGatewayId:
+        Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwId
+      VpcId:
+        Fn::ImportValue: NwfwPoC-OutboundVpc-VpcId
+      SubnetIds: 
+        - Fn::ImportValue: NwfwPoC-OutboundVpc-TgwSubnet1Id
+        - Fn::ImportValue: NwfwPoC-OutboundVpc-TgwSubnet2Id
+        - Fn::ImportValue: NwfwPoC-OutboundVpc-TgwSubnet3Id
+      Tags: 
+        - Key: "Name"
+          Value: !Sub "${AWS::StackName}-AttachVpcToVpcsConnectionTgw"
+  AssociatTgwRouteTableToOutboundVpc:
+    Type: "AWS::EC2::TransitGatewayRouteTableAssociation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachVpcToVpcsConnectionTgw
+      TransitGatewayRouteTableId:
+        Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwRouteTableId
+  #---TGW: Add DefaultGW
+  AddRouteDefaultGwtoVpcsConnectionTgwRouteTable:
+    Type: "AWS::EC2::TransitGatewayRoute"
+    Properties:
+      DestinationCidrBlock: "0.0.0.0/0"
+      TransitGatewayAttachmentId: !Ref AttachVpcToVpcsConnectionTgw
+      TransitGatewayRouteTableId:
+        Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwRouteTableId

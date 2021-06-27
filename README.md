@@ -61,7 +61,14 @@ export REGION=$(aws --profile ${PROFILE} configure get region)
 echo "${PROFILE}  ${REGION}"
 ```
 
-## (2)TransitGateway
+## (2)Managed Prefix ListとTransitGateway
+### (2)-(a) Managed Prefix List
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-PrefixList \
+    --template-body "file://./src/tgw/managed-prefix.yaml";
+```
+### (2)-(b) ListとTransitGateway
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-Tgw \
@@ -100,7 +107,7 @@ RouteTable3Id=$(aws --profile ${PROFILE} --output text \
   --query 'Stacks[].Outputs[?OutputKey==`PrivateSubnet3RouteTableId`].[OutputValue]' )
 OnprePrefixListId=$(aws --profile ${PROFILE} --output text \
   cloudformation describe-stacks \
-    --stack-name NwfwPoC-Tgw \
+    --stack-name NwfwPoC-PrefixList \
   --query 'Stacks[].Outputs[?OutputKey==`OnpremisPrefixId`].[OutputValue]' )
 OnpreTgwId=$(aws --profile ${PROFILE} --output text \
   cloudformation describe-stacks \
@@ -158,17 +165,61 @@ aws --profile ${PROFILE} cloudformation create-stack \
     --capabilities CAPABILITY_NAMED_IAM ;
 ```
 ## (4)OutboundVPC環境
-### (3)-(a) Network FireWall Policy作成
+### (4)-(a) Network FireWall Policy作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-NwfwPolicies \
     --template-body "file://./src/Outbound-Vpc/firewall-policy.yaml" ;
 ```
-
-### (3)-(b) VPC作成
+### (4)-(b) VPC作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-OutboundVpc \
     --template-body "file://./src/Outbound-Vpc/outbound-vpc.yaml" \
     --capabilities CAPABILITY_NAMED_IAM ;
+```
+### (4)-(c) TGWのアタッチ
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-AttachTgwToOutboundVpc \
+    --template-body "file://./src/Outbound-Vpc/attach-outboundvpc-to-tgw.yaml" ;
+```
+### (4)-(d) オンプレルートの個別追加
+2021.6月時点で、CFnのRout作成でManaged Prefixが対応していないため、CLIでルートを追加する
+```shell
+#構成情報取得
+RouteTable1Id=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-OutboundVpc \
+  --query 'Stacks[].Outputs[?OutputKey==`NatSubnet1RouteTableId`].[OutputValue]' )
+RouteTable2Id=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-OutboundVpc \
+  --query 'Stacks[].Outputs[?OutputKey==`NatSubnet2RouteTableId`].[OutputValue]' )
+RouteTable3Id=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-OutboundVpc \
+  --query 'Stacks[].Outputs[?OutputKey==`NatSubnet3RouteTableId`].[OutputValue]' )
+VpcsPrefixListId=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-PrefixList \
+  --query 'Stacks[].Outputs[?OutputKey==`VpcsPrefixId`].[OutputValue]' )
+VpcsTgwId=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-Tgw \
+  --query 'Stacks[].Outputs[?OutputKey==`VpcConnectTgwId`].[OutputValue]' )
+
+echo -n "RouteTable1Id = ${RouteTable1Id}\nRouteTable2Id = ${RouteTable2Id}\nRouteTable3Id = ${RouteTable3Id}\nVpcsPrefixListId = ${VpcsPrefixListId}\nVpcsTgwId = ${VpcsTgwId}"
+```
+ルートを追加します。
+```shell
+#オンプレ経由のルート追加
+for table in ${RouteTable1Id} ${RouteTable2Id} ${RouteTable3Id}
+do
+  aws --profile ${PROFILE} \
+    ec2 create-route \
+      --route-table-id ${table} \
+      --destination-prefix-list-id ${VpcsPrefixListId} \
+      --transit-gateway-id ${VpcsTgwId} ;
+done
 ```
