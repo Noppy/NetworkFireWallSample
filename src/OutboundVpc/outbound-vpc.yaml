@@ -1,0 +1,451 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploy a VPC and 6 subnets
+#----------------------------------------------
+Parameters:
+  #------------------
+  VpcName:
+    Description: Name for the VPC
+    Type: String
+    Default: MainVPC
+    ConstraintDescription: Can contain only ASCII characters.
+  VpcCidr:
+    Description: CIDR Block for the VPC
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.0/24
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.0.0/16
+  DnsSupport:
+    Type: String
+    Default: true
+    AllowedValues:
+      - true
+      - false
+  DnsHostnames:
+    Type: String
+    Default: true
+    AllowedValues:
+      - true
+      - false
+  #---
+  DhcpOptionsDomainNameServers1:
+    Description: "The IPv4 addresses of a 1st domain name servers, or AmazonProvidedDNS"
+    Type: String
+    Default: "AmazonProvidedDNS"
+  DhcpOptionsDomainNameServers2:
+    Description: "The IPv4 addresses of a 2nd domain name servers, or Blank"
+    Type: String
+    Default: ""
+  DhcpOptionsNtpServers1:
+    Description: "The IPv4 addresses of a 1st Network Time Protocol (NTP) servers."
+    Type: String
+    Default: 169.254.169.123
+  DhcpOptionsNtpServers2:
+    Description: "The IPv4 addresses of a 2nd Network Time Protocol (NTP) servers or blank."
+    Type: String
+    Default: ""
+  #---
+  FwSubnet1Name:
+    Description: Name for the Firewall Subnet 1
+    Type: String
+    Default: FwSub1
+  FwSubnet1Cidr:
+    Description: CIDR Block for the Firewall subnet 1
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.128/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  FwSubnet2Name:
+    Description: Name for the Firewall Subnet 2
+    Type: String
+    Default: FwSub1
+  FwSubnet2Cidr:
+    Description: CIDR Block for the Firewall subnet 2
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 110.1.1.144/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  FwSubnet3Name:
+    Description: Name for the Firewall Subnet 3
+    Type: String
+    Default: FwSub1
+  FwSubnet3Cidr:
+    Description: CIDR Block for the Firewall subnet 3
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.160/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  NatSubnet1Name:
+    Description: Name for the Nat Subnet 1
+    Type: String
+    Default: NatSub1
+  NatSubnet1Cidr:
+    Description: CIDR Block for the Nat subnet 1
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.64/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  NatSubnet2Name:
+    Description: Name for the Nat Subnet 2
+    Type: String
+    Default: NatSub2
+  NatSubnet2Cidr:
+    Description: CIDR Block for the Nat subnet 2
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.80/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  NatSubnet3Name:
+    Description: Name for the Nat Subnet 3
+    Type: String
+    Default: NatSub3
+  NatSubnet3Cidr:
+    Description: CIDR Block for the Nat subnet 3
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.96/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  TgwSubnet1Name:
+    Description: Name for the TransitGateway Subnet 1
+    Type: String
+    Default: TgwSub1
+  TgwSubnet1Cidr:
+    Description: CIDR Block for the TransitGateway subnet 1
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.192/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  TgwSubnet2Name:
+    Description: Name for the TransitGateway Subnet 2
+    Type: String
+    Default: TgwSub2
+  TgwSubnet2Cidr:
+    Description: CIDR Block for the TransitGateway subnet 2
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.208/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  TgwSubnet3Name:
+    Description: Name for the TransitGateway Subnet 3
+    Type: String
+    Default: TgwSub3
+  TgwSubnet3Cidr:
+    Description: CIDR Block for the TransitGateway subnet 3
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.224/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #------------------
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      -
+        Label:
+          default: "VPC Configurations"
+        Parameters:
+          - VpcName
+          - VpcCidr
+          - DnsSupport
+          - DnsHostnames
+      -
+        Label:
+          default: "VPC DHCP Options Configurations"
+        Parameters:
+          - DhcpOptionsDomainNameServers1
+          - DhcpOptionsDomainNameServers2
+          - DhcpOptionsNtpServers1
+          - DhcpOptionsNtpServers2
+      -
+        Label:
+          default: "Subnets Configurations"
+        Parameters:
+          - FwSubnet1Name
+          - FwSubnet1Cidr
+          - FwSubnet2Name
+          - FwSubnet2Cidr
+          - FwSubnet3Name
+          - FwSubnet3Cidr
+          - NatSubnet1Name
+          - NatSubnet1Cidr
+          - NatSubnet2Name
+          - NatSubnet2Cidr
+          - NatSubnet3Name
+          - NatSubnet3Cidr
+          - TgwSubnet1Name
+          - TgwSubnet1Cidr
+          - TgwSubnet2Name
+          - TgwSubnet2Cidr
+          - TgwSubnet3Name
+          - TgwSubnet3Cidr
+#----------------------------------------------
+Resources:
+  #------------------ VPC FlowLog Role
+  FlowlogRole:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: "Flowlog"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: Allow
+                Action: 
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:DescribeLogGroups"
+                  - "logs:DescribeLogStreams"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+  #------------------ VPC
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: !Ref DnsSupport
+      EnableDnsHostnames: !Ref DnsHostnames
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-OutboundVpc
+  #------------------ DHCP Options
+  DhcpOptions:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainNameServers:
+        - !Ref DhcpOptionsDomainNameServers1
+        - !Ref DhcpOptionsDomainNameServers2
+      NtpServers: 
+        - !Ref DhcpOptionsNtpServers1
+        - !Ref DhcpOptionsNtpServers2
+      Tags: 
+        - Key: Name
+          Value: NwfwPoC-OutboundVpc-DhcpOptions
+  AssociationDhcpOptionsToVpc:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties:
+      DhcpOptionsId: !Ref DhcpOptions
+      VpcId: !Ref Vpc
+  #------------------ Internet GW
+  Igw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-OutboundVpc-Igw
+  AttachIgw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref Igw
+      VpcId: !Ref Vpc
+  #------------------ Subnet
+  #-- Firewall Subnets
+  FwSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref FwSubnet1Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 0
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${FwSubnet1Name}
+  FwSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref FwSubnet2Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 1
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${FwSubnet2Name}
+  FwSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref FwSubnet3Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 2
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${FwSubnet3Name}
+  #-- Nat Subnets
+  NatSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref NatSubnet1Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 0
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${NatSubnet1Name}
+  NatSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref NatSubnet2Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 1
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${NatSubnet2Name}
+  NatSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref NatSubnet3Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 2
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${NatSubnet3Name}
+  #-- Tgw Subnets
+  TgwSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref TgwSubnet1Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 0
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${TgwSubnet1Name}
+  TgwSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref TgwSubnet2Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 1
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${TgwSubnet2Name}
+  TgwSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref TgwSubnet3Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 2
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${TgwSubnet3Name}
+  #------------------ Firewall
+
+
+
+
+
+
+  #------------------ Nat GW
+  NatGw1:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachIgw
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EipNatGw1
+        - AllocationId
+      SubnetId:
+        Ref: NatSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-NatGW1
+  EipNatGw1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  #---
+  NatGw2:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachIgw
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EipNatGw2
+        - AllocationId
+      SubnetId:
+        Ref: NatSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-NatGW2
+  EipNatGw2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  #---
+  NatGw3:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachIgw
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EipNatGw3
+        - AllocationId
+      SubnetId:
+        Ref: NatSubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-NatGW3
+  EipNatGw3:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      

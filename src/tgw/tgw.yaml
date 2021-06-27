@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploy a Transit Gateway
+#----------------------------------------------
+Parameters:
+  AsnForVpcConnectTgw:
+    Description: "AS number for the VPCs connect and Transit Gateway"
+    Type: Number
+    Default: 64512
+    MinValue: 64512
+    MaxValue: 65534
+  AsnForOnPremisConnectTgw:
+      Description: "AS number for the On-Premis connect Transit Gateway"
+      Type: Number
+      Default: 64512
+      MinValue: 64512
+      MaxValue: 65534
+
+Resources:
+  #------------------ Managed Prefix
+  OnpremisPrefix:
+    Type: AWS::EC2::PrefixList
+    Properties: 
+      AddressFamily: "IPv4"
+      MaxEntries: 20
+      PrefixListName: "NwfwPoc-OmpremisPrefix"
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-OmpremisPrefix"
+  #------------------ Transit Gateway
+  #-- TGW for Vpcs Connection
+  VpcConnectTgw:
+    Type: AWS::EC2::TransitGateway
+    Properties: 
+      Description: Transit Gateway for VPCs connect
+      AmazonSideAsn: !Ref AsnForVpcConnectTgw
+      AutoAcceptSharedAttachments: "enable"
+      DefaultRouteTableAssociation: "disable"
+      DefaultRouteTablePropagation: "disable"
+      DnsSupport: "enable"
+      MulticastSupport: "disable"
+      VpnEcmpSupport: "disable"
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-VpcConnectTgw"
+  VpcConnectTgwRouteTable:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties: 
+      TransitGatewayId: !Ref VpcConnectTgw
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-VpcConnectTgwRouteTable"
+  #-- TGW for On-Premis Connection
+  OnpremisConnectTgw:
+    Type: AWS::EC2::TransitGateway
+    Properties: 
+      Description: Transit Gateway for On-Premis connect
+      AmazonSideAsn: !Ref AsnForOnPremisConnectTgw
+      AutoAcceptSharedAttachments: "enable"
+      DefaultRouteTableAssociation: "disable"
+      DefaultRouteTablePropagation: "disable"
+      DnsSupport: "enable"
+      MulticastSupport: "disable"
+      VpnEcmpSupport: "disable"
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-OnpremisConnectTgw"
+  OnpremisConnectTgwRouteTable:
+    Type: AWS::EC2::TransitGatewayRouteTable
+    Properties: 
+      TransitGatewayId: !Ref OnpremisConnectTgw
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-OnpremisConnectTgwRouteTable"
+Outputs:
+  #------------------ Managed Prefix
+  OnpremisPrefixId:
+    Description: The ID of the managed Prefix for On-Premis
+    Value: !Ref OnpremisPrefix
+    Export:
+      Name: !Sub ${AWS::StackName}-OnpremisPrefixId
+  OnpremisPrefixArn:
+    Description: The Arn of the managed Prefix for On-Premis
+    Value: !GetAtt OnpremisPrefix.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-OnpremisPrefixArn
+  #------------------ Transit Gateway for VPCs connection
+  VpcConnectTgwId:
+    Description: "The ID of the Transit Gateway for VPCs connection"
+    Value: !Ref VpcConnectTgw
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcConnectTgwId
+  VpcConnectTgwRouteTableId:
+    Description: "The ID of the Transit Gateway Route Table for VPCs connection"
+    Value: !Ref VpcConnectTgwRouteTable
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcConnectTgwRouteTableId
+  OnpremisConnectTgwId:
+    Description: "The ID of the Transit Gateway for On-Premis connection"
+    Value: !Ref OnpremisConnectTgw
+    Export:
+      Name: !Sub ${AWS::StackName}-OnpremisConnectTgwId
+  OnpremisConnectTgwRouteTableId:
+    Description: "The ID of the Transit Gateway Route Table for On-Premis connection"
+    Value: !Ref OnpremisConnectTgwRouteTable
+    Export:
+      Name: !Sub ${AWS::StackName}-OnpremisConnectTgwRouteTableId

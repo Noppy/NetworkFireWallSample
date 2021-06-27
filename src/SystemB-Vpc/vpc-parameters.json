@@ -1,0 +1,74 @@
+[
+  {
+    "ParameterKey": "VpcName",
+    "ParameterValue": "NwfwPoC-SystemBVpc"
+  },
+  {
+    "ParameterKey": "InternetAccess",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "EnableNatGW",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "DnsHostnames",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "DnsSupport",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "VpcCidr",
+    "ParameterValue": "10.1.3.0/24"
+  },
+  {
+    "ParameterKey": "PublicSubnet1Name",
+    "ParameterValue": "NwfwPoC-SystemBVpc-SystemB-TgwSub1"
+  },
+  {
+    "ParameterKey": "PublicSubnet1Cidr",
+    "ParameterValue": "10.1.3.192/28"
+  },
+  {
+    "ParameterKey": "PublicSubnet2Name",
+    "ParameterValue": "NwfwPoC-SystemBVpc-SystemB-TgwSub2"
+  },
+  {
+    "ParameterKey": "PublicSubnet2Cidr",
+    "ParameterValue": "10.1.3.208/28"
+  },
+  {
+    "ParameterKey": "PublicSubnet3Name",
+    "ParameterValue": "NwfwPoC-SystemBVpc-SystemB-TgwSub3"
+  },
+  {
+    "ParameterKey": "PublicSubnet3Cidr",
+    "ParameterValue": "10.1.3.224/28"
+  },
+  {
+    "ParameterKey": "PrivateSubnet1Name",
+    "ParameterValue": "NwfwPoC-SystemBVpc-SystemB-ResourceSub1"
+  },
+  {
+    "ParameterKey": "PrivateSubnet1Cidr",
+    "ParameterValue": "10.1.3.0/26"
+  },
+  {
+    "ParameterKey": "PrivateSubnet2Name",
+    "ParameterValue": "NwfwPoC-SystemBVpc-SystemB-ResourceSub2"
+  },
+  {
+    "ParameterKey": "PrivateSubnet2Cidr",
+    "ParameterValue": "10.1.3.64/26"
+  },
+  {
+    "ParameterKey": "PrivateSubnet3Name",
+    "ParameterValue": "NwfwPoC-SystemBVpc-SystemB-ResourceSub3"
+  },
+  {
+    "ParameterKey": "PrivateSubnet3Cidr",
+    "ParameterValue": "10.1.3.128/26"
+  }
+]

@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploy VPCEs to SystemB VPC
+#----------------------------------------------
+Resources:
+  #------------------------ VPCE
+  S3VpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemBVpc-VpcId
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      RouteTableIds:
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet1RouteTableId
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet2RouteTableId
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet3RouteTableId
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:*'
+            Resource:
+              # Allow connections to the Amazon Linux yum repositories
+              - "arn:aws:s3:::packages.*.amazonaws.com/*"
+              - "arn:aws:s3:::repo.*.amazonaws.com/*"
+              # Allow connections to the Amazon Linux2 yum repositories
+              - "arn:aws:s3:::amazonlinux.*.amazonaws.com/*"
+  SsmEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemBVpc-VpcId
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: yes
+      SubnetIds:
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet1Id
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet2Id
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet3Id
+      SecurityGroupIds: 
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-DefaultSecurityGroupId
+  Ec2MessagesEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemBVpc-VpcId
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: yes
+      SubnetIds:
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet1Id
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet2Id
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet3Id
+      SecurityGroupIds: 
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-DefaultSecurityGroupId
+  SsmMessagesEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemBVpc-VpcId
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: yes
+      SubnetIds:
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet1Id
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet2Id
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet3Id
+      SecurityGroupIds: 
+        - Fn::ImportValue: NwfwPoC-SystemBVpc-DefaultSecurityGroupId
