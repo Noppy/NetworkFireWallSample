@@ -687,6 +687,72 @@ Resources:
     Properties:
       SubnetId: !Ref FwSubnet3
       RouteTableId: !Ref FwSubnet3RouteTable
+  #-- Nat Route Table:
+  NatSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatSubnet1-route-table"
+  AttachDefaultGwToNatSubnet1RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub1
+  #--
+  NatSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatSubnet2-route-table"
+  AttachDefaultGwToNatSubnet2RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub2
+  #--
+  NatSubnet3RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatSubnet3-route-table"
+  AttachDefaultGwToNatSubnet3RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatSubnet3RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub3
+  #-- Attache to Nat subnets
+  NatSubnet1RouteTableAssociationNatSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatSubnet1
+      RouteTableId: !Ref NatSubnet1RouteTable
+  NatSubnet2RouteTableAssociationNatSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatSubnet2
+      RouteTableId: !Ref NatSubnet2RouteTable
+  NatSubnet3RouteTableAssociationNatSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatSubnet3
+      RouteTableId: !Ref NatSubnet3RouteTable
+
+
+
+
+
+
+
+
 
   #------------------ Cloudwatch log for Flowlog
   VPCFlowlog:
