@@ -745,14 +745,64 @@ Resources:
     Properties:
       SubnetId: !Ref NatSubnet3
       RouteTableId: !Ref NatSubnet3RouteTable
-
-
-
-
-
-
-
-
+  #-- Tgw Route Table:
+  TgwSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-TgwSubnet1-route-table"
+  AttachDefaultGwToTgwSubnet1RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TgwSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGw1
+  #--
+  TgwSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-TgwSubnet2-route-table"
+  AttachDefaultGwToTgwSubnet2RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TgwSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGw2
+  #--
+  TgwSubnet3RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-TgwSubnet3-route-table"
+  AttachDefaultGwToTgwSubnet3RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TgwSubnet3RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGw3
+  #-- Attache to Tgw subnets
+  TgwSubnet1RouteTableAssociationTgwSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet1
+      RouteTableId: !Ref TgwSubnet1RouteTable
+  TgwSubnet2RouteTableAssociationTgwSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet2
+      RouteTableId: !Ref TgwSubnet2RouteTable
+  TgwSubnet3RouteTableAssociationTgwSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet3
+      RouteTableId: !Ref TgwSubnet3RouteTable
 
   #------------------ Cloudwatch log for Flowlog
   VPCFlowlog:
