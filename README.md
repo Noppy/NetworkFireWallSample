@@ -89,15 +89,15 @@ aws --profile ${PROFILE} cloudformation create-stack \
 RouteTable1Id=$(aws --profile ${PROFILE} --output text \
   cloudformation describe-stacks \
     --stack-name NwfwPoC-SystemBVpc \
-  --query 'Stacks[].Outputs[?OutputKey==`TgwSubnet1RouteTableId`].[OutputValue]' )
+  --query 'Stacks[].Outputs[?OutputKey==`PrivateSubnet1RouteTableId`].[OutputValue]' )
 RouteTable2Id=$(aws --profile ${PROFILE} --output text \
   cloudformation describe-stacks \
     --stack-name NwfwPoC-SystemBVpc \
-  --query 'Stacks[].Outputs[?OutputKey==`TgwSubnet2RouteTableId`].[OutputValue]' )
+  --query 'Stacks[].Outputs[?OutputKey==`PrivateSubnet2RouteTableId`].[OutputValue]' )
 RouteTable3Id=$(aws --profile ${PROFILE} --output text \
   cloudformation describe-stacks \
     --stack-name NwfwPoC-SystemBVpc \
-  --query 'Stacks[].Outputs[?OutputKey==`TgwSubnet3RouteTableId`].[OutputValue]' )
+  --query 'Stacks[].Outputs[?OutputKey==`PrivateSubnet3RouteTableId`].[OutputValue]' )
 OnprePrefixListId=$(aws --profile ${PROFILE} --output text \
   cloudformation describe-stacks \
     --stack-name NwfwPoC-Tgw \
@@ -108,8 +108,9 @@ OnpreTgwId=$(aws --profile ${PROFILE} --output text \
   --query 'Stacks[].Outputs[?OutputKey==`OnpremisConnectTgwId`].[OutputValue]' )
 
 echo -n "RouteTable1Id = ${RouteTable1Id}\nRouteTable2Id = ${RouteTable2Id}\nRouteTable3Id = ${RouteTable3Id}\nOnprePrefixListId = ${OnprePrefixListId}\nOnpreTgwId = ${OnpreTgwId}"
-
-
+```
+ルートを追加します。
+```shell
 #オンプレ経由のルート追加
 for table in ${RouteTable1Id} ${RouteTable2Id} ${RouteTable3Id}
 do

@@ -63,7 +63,7 @@ Resources:
       NetworkInterfaces:
         - DeviceIndex: '0'
           SubnetId:
-            Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet1Id
+            Fn::ImportValue: NwfwPoC-SystemBVpc-PrivateSubnet1Id
           GroupSet:
             - Fn::ImportValue: NwfwPoC-SystemBVpc-DefaultSecurityGroupId
           AssociatePublicIpAddress: false

@@ -34,7 +34,7 @@ Resources:
       Type: AWS::EC2::Route
       Properties:
         RouteTableId:
-          Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet1RouteTableId
+          Fn::ImportValue: NwfwPoC-SystemBVpc-PrivateSubnet1RouteTableId
         DestinationCidrBlock: 0.0.0.0/0
         TransitGatewayId:
           Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwId
@@ -44,7 +44,7 @@ Resources:
       Type: AWS::EC2::Route
       Properties:
         RouteTableId:
-          Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet2RouteTableId
+          Fn::ImportValue: NwfwPoC-SystemBVpc-PrivateSubnet2RouteTableId
         DestinationCidrBlock: 0.0.0.0/0
         TransitGatewayId:
           Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwId
@@ -54,7 +54,7 @@ Resources:
       Type: AWS::EC2::Route
       Properties:
         RouteTableId:
-          Fn::ImportValue: NwfwPoC-SystemBVpc-TgwSubnet3RouteTableId
+          Fn::ImportValue: NwfwPoC-SystemBVpc-PrivateSubnet3RouteTableId
         DestinationCidrBlock: 0.0.0.0/0
         TransitGatewayId:
           Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwId
