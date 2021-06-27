@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploy a Transit Gateway
+#----------------------------------------------
+Resources:
+  #------------------ Managed Prefix
+  OnpremisPrefix:
+    Type: AWS::EC2::PrefixList
+    Properties: 
+      AddressFamily: "IPv4"
+      MaxEntries: 20
+      PrefixListName: "NwfwPoc-OmpremisPrefixList"
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-OmpremisPrefixList"
+  VpcsPrefix:
+    Type: AWS::EC2::PrefixList
+    Properties: 
+      AddressFamily: "IPv4"
+      MaxEntries: 20
+      PrefixListName: "NwfwPoc-VpcsPrefixList"
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-V@csPrefixList"
+      Entries:
+        - Cidr: "10.0.0.0/8"
+          Description: "VPCs CIDR Range"
+
+Outputs:
+  #------------------ Managed Prefix
+  #---
+  OnpremisPrefixId:
+    Description: The ID of the managed Prefix for On-Premis
+    Value: !Ref OnpremisPrefix
+    Export:
+      Name: !Sub ${AWS::StackName}-OnpremisPrefixId
+  OnpremisPrefixArn:
+    Description: The Arn of the managed Prefix for On-Premis
+    Value: !GetAtt OnpremisPrefix.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-OnpremisPrefixArn
+  #---
+  VpcsPrefixId:
+    Description: The ID of the managed Prefix for Vpcs
+    Value: !Ref VpcsPrefix
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcsPrefixId
+  VpcsPrefixArn:
+    Description: The Arn of the managed Prefix for Vpcs
+    Value: !GetAtt VpcsPrefix.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcsPrefixArn

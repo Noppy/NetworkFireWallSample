@@ -16,16 +16,6 @@ Parameters:
       MaxValue: 65534
 
 Resources:
-  #------------------ Managed Prefix
-  OnpremisPrefix:
-    Type: AWS::EC2::PrefixList
-    Properties: 
-      AddressFamily: "IPv4"
-      MaxEntries: 20
-      PrefixListName: "NwfwPoc-OmpremisPrefix"
-      Tags: 
-        - Key: "Name"
-          Value: "NwfwPoc-OmpremisPrefix"
   #------------------ Transit Gateway
   #-- TGW for Vpcs Connection
   VpcConnectTgw:
@@ -72,17 +62,6 @@ Resources:
         - Key: "Name"
           Value: "NwfwPoc-OnpremisConnectTgwRouteTable"
 Outputs:
-  #------------------ Managed Prefix
-  OnpremisPrefixId:
-    Description: The ID of the managed Prefix for On-Premis
-    Value: !Ref OnpremisPrefix
-    Export:
-      Name: !Sub ${AWS::StackName}-OnpremisPrefixId
-  OnpremisPrefixArn:
-    Description: The Arn of the managed Prefix for On-Premis
-    Value: !GetAtt OnpremisPrefix.Arn
-    Export:
-      Name: !Sub ${AWS::StackName}-OnpremisPrefixArn
   #------------------ Transit Gateway for VPCs connection
   VpcConnectTgwId:
     Description: "The ID of the Transit Gateway for VPCs connection"
