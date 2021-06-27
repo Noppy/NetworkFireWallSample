@@ -803,7 +803,6 @@ Resources:
     Properties:
       SubnetId: !Ref TgwSubnet3
       RouteTableId: !Ref TgwSubnet3RouteTable
-
   #------------------ Cloudwatch log for Flowlog
   VPCFlowlog:
     Type: AWS::EC2::FlowLog
@@ -813,3 +812,160 @@ Resources:
       ResourceId: !Ref Vpc
       ResourceType: VPC
       TrafficType: ALL
+Outputs:
+  #------------------ VPC
+  VpcId:
+    Description:  VPC ID
+    Value: !Ref Vpc
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcId"
+  VpcCidr:
+    Description:  VPC CIDR
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcCidr"
+  #------------------ Subnet ID
+  FwSubnet1Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet1Id"
+  FwSubnet2Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet2Id"
+  FwSubnet3Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet3Id"
+  #--
+  NatSubnet1Id:
+    Description: Nat Subnet1 ID in the VPC
+    Value: !Ref NatSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet1Id"
+  NatSubnet2Id:
+    Description: Nat Subnet2 ID in the VPC
+    Value: !Ref NatSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet2Id"
+  NatSubnet3Id:
+    Description: Nat Subnet3 ID in the VPC
+    Value: !Ref NatSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet3Id"
+  #--
+  TgwSubnet1Id:
+    Description: TransitGateway Subnet1 ID in the VPC
+    Value: !Ref TgwSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet1Id"
+  TgwSubnet2Id:
+    Description: TransitGateway Subnet2 ID in the VPC
+    Value: !Ref TgwSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet2Id"
+  TgwSubnet3Id:
+    Description: TransitGateway Subnet3 ID in the VPC
+    Value: !Ref TgwSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet3Id"
+  #------------------ Subnet CIDR
+  FwSubnet1Cidr:
+    Description: CIDR of Firewall Subnet1 in the VPC
+    Value: !Ref FwSubnet1Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet1Cidr"
+  FwSubnet2Cidr:
+    Description: CIDR of Firewall Subnet2 in the VPC
+    Value: !Ref FwSubnet2Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet2Cidr"
+  FwSubnet3Cidr:
+    Description: CIDR of Firewall Subnet3 in the VPC
+    Value: !Ref FwSubnet3Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet3Cidr"
+  #--
+  NatSubnet1Cidr:
+    Description: CIDR of NAT Subnet1 in the VPC
+    Value: !Ref NatSubnet1Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet1Cidr"
+  NatSubnet2Cidr:
+    Description: CIDR of NAT Subnet2 in the VPC
+    Value: !Ref NatSubnet2Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet2Cidr"
+  NatSubnet3Cidr:
+    Description: CIDR of NAT Subnet3 in the VPC
+    Value: !Ref NatSubnet3Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet3Cidr"
+  #------------------ route tables
+  FwSubnet1RouteTableId:
+    Description: Route table for Firewall Subnet1
+    Value: !Ref FwSubnet1RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet1RouteTableId"
+  FwSubnet2RouteTableId:
+    Description: Route table for Firewall Subnet2
+    Value: !Ref FwSubnet2RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet2RouteTableId"
+  FwSubnet3RouteTableId:
+    Description: Route table for Firewall Subnet3
+    Value: !Ref FwSubnet3RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet3RouteTableId"
+  #--
+  NatSubnet1RouteTableId:
+    Description: Route table for Nat Subnet1
+    Value: !Ref NatSubnet1RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet1RouteTableId"
+  NatSubnet2RouteTableId:
+    Description: Route table for Nat Subnet2
+    Value: !Ref NatSubnet2RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet2RouteTableId"
+  NatSubnet3RouteTableId:
+    Description: Route table for Nat Subnet3
+    Value: !Ref NatSubnet3RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet3RouteTableId"
+  #--
+  TgwSubnet1RouteTableId:
+    Description: Route table for TransitGateway Subnet1
+    Value: !Ref TgwSubnet1RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet1RouteTableId"
+  TgwSubnet2RouteTableId:
+    Description: Route table for TransitGateway Subnet2
+    Value: !Ref TgwSubnet2RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet2RouteTableId"
+  TgwSubnet3RouteTableId:
+    Description: Route table for TransitGateway Subnet3
+    Value: !Ref TgwSubnet3RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet3RouteTableId"
+  #------------------ Default setting
+  DefaultSecurityGroupId:
+    Description: Default Security Group Id
+    Value: !GetAtt Vpc.DefaultSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-DefaultSecurityGroupId
+  #------------------ Firewall
+  SpokeVpcAFirewallId:
+    Description: Id of the Firewall
+    Value: !GetAtt SpokeVpcAFirewall.FirewallId
+    Export:
+      Name: !Sub ${AWS::StackName}-SpokeVpcAFirewallId
+  SpokeVpcAFirewallArn:
+    Description: Arn of the Firewall
+    Value: !GetAtt SpokeVpcAFirewall.FirewallArn
+    Export:
+      Name: !Sub ${AWS::StackName}-SpokeVpcAFirewallArn
