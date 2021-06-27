@@ -26,6 +26,11 @@ Resources:
               - "arn:aws:s3:::repo.*.amazonaws.com/*"
               # Allow connections to the Amazon Linux2 yum repositories
               - "arn:aws:s3:::amazonlinux.*.amazonaws.com/*"
+              - Fn::Join:
+                  - ""
+                  - - "arn:aws:s3:::amazonlinux-2-repos-"
+                    - !Sub "${AWS::Region}"
+                    - "/*"
   SsmEndpoint:
     Type: 'AWS::EC2::VPCEndpoint'
     Properties:
