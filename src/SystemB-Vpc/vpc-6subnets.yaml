@@ -509,8 +509,8 @@ Resources:
           Value:
             Fn::If:
               - CheckEnvironment
-              - !Sub ${EnvironmentName}-${VpcName}-PubSubRouteTable
-              - !Sub ${VpcName}-PubSubRouteTable
+              - !Sub ${EnvironmentName}-${VpcName}-TgwSubRouteTable
+              - !Sub ${VpcName}-TgwSubRouteTable
         - Key: Environment
           Value: !Ref EnvironmentName
   VpcInternetRote:
