@@ -492,3 +492,494 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${VpcName}-${TgwSubnet3Name}
+  #------------------ Firewall
+  SpokeVpcAFirewall:
+    Type: AWS::NetworkFirewall::Firewall
+    Properties:
+      FirewallName: !Sub "${VpcName}-Ingress-firewall"
+      FirewallPolicyArn:
+        Fn::ImportValue: NwfwPoC-NwfwPolicies-EgressFirewallPolicyArn
+      VpcId: !Ref Vpc
+      SubnetMappings:
+        - SubnetId: !Ref FwSubnet1
+        - SubnetId: !Ref FwSubnet2
+        - SubnetId: !Ref FwSubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-Ingress-firewall"
+          #--Firewall Log Configuration
+  SpokeVpcAFirewallLogFlowGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${AWS::StackName}/anfw/flow"
+  SpokeVpcAFirewallLogAlertGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${AWS::StackName}/anfw/alert"
+  SpokeVpcAFirewallLog:
+    Type: AWS::NetworkFirewall::LoggingConfiguration
+    Properties:
+      FirewallArn: !Ref SpokeVpcAFirewall
+      LoggingConfiguration:
+        LogDestinationConfigs:
+          - LogType: FLOW
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: !Sub "/${AWS::StackName}/anfw/flow"
+          - LogType: ALERT
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: !Sub "/${AWS::StackName}/anfw/alert"
+  #------------------ Firewall Retrieve 
+  #Retrieve VpceId Lambda Custom Resource:
+  #Comment: 
+  #  Since there is no way to get the endpoint ID of Network Firewall 
+  #  for each subnet in standard CloudFormation, use Custom Type and 
+  #  Lambda functions to get the VPC endpoint of Firewall for each subnet.
+  #-- IAM Role for Lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt RetrieveVpcIdLogGroup.Arn
+              - Effect: Allow
+                Action:
+                  - network-firewall:DescribeFirewall
+                Resource: "*"
+  #-- Logs
+  RetrieveVpcIdLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+        LogGroupName: !Sub /aws/lambda/${AWS::StackName}-retrieve-vpceid
+        RetentionInDays: 1
+  #-- Lambda Function
+  RetrieveVpceId:
+    Type: AWS::Lambda::Function
+    DependsOn: RetrieveVpcIdLogGroup
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-retrieve-vpceid
+      Handler: "index.handler"
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import json
+          import logging
+
+          def GetVpcid(NfwResponse, SubnetId):
+            VpceId = 'NULL'
+            for Az in NfwResponse['FirewallStatus']['SyncStates'].values():
+              if Az['Attachment']['SubnetId'] == SubnetId:
+                VpceId = Az['Attachment']['EndpointId']
+                break
+            return VpceId
+
+          def handler(event, context):
+              logger = logging.getLogger()
+              logger.setLevel(logging.INFO)
+              responseData = {}
+              responseStatus = cfnresponse.FAILED
+              logger.info('Received event: {}'.format(json.dumps(event)))
+              if event["RequestType"] == "Delete":
+                  responseStatus = cfnresponse.SUCCESS
+                  cfnresponse.send(event, context, responseStatus, responseData)
+              else:
+                try:
+                  FwSubnet1 = event["ResourceProperties"]["FwSub1"]
+                  FwSubnet2 = event["ResourceProperties"]["FwSub2"]
+                  FwSubnet3 = event["ResourceProperties"]["FwSub3"]
+                  FwArn = event["ResourceProperties"]["FwArn"]
+                except Exception as e:
+                  logger.info('AZ retrieval failure: {}'.format(e))
+                try:
+                  nfw = boto3.client('network-firewall')
+                except Exception as e:
+                  logger.info('boto3.client failure: {}'.format(e))
+                try:
+                  NfwResponse=nfw.describe_firewall(FirewallArn=FwArn)
+                  VpceIdInFwSub1 = GetVpcid(NfwResponse, FwSubnet1)
+                  VpceIdInFwSub2 = GetVpcid(NfwResponse, FwSubnet2)
+                  VpceIdInFwSub3 = GetVpcid(NfwResponse, FwSubnet3)
+                except Exception as e:
+                  logger.info('ec2.describe_firewall failure: {}'.format(e))
+                responseData['VpceIdInFwSub1'] = VpceIdInFwSub1
+                responseData['VpceIdInFwSub2'] = VpceIdInFwSub2
+                responseData['VpceIdInFwSub3'] = VpceIdInFwSub3
+                responseStatus = cfnresponse.SUCCESS
+                cfnresponse.send(event, context, responseStatus, responseData)
+      Runtime: python3.7
+      Timeout: 30
+  #---- Custom Type
+  FirewallVpceIds:
+    Type: Custom::DescribeVpcEndpoints
+    Properties:
+      ServiceToken: !GetAtt RetrieveVpceId.Arn
+      FwSub1: !Ref FwSubnet1
+      FwSub2: !Ref FwSubnet2
+      FwSub3: !Ref FwSubnet3
+      FwArn: !Ref SpokeVpcAFirewall
+  #------------------ Route Table
+  #-- Ingress Route Table:
+  IngressRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-ingress-route-table"
+  IngressRouteTableAssociation:
+    Type: AWS::EC2::GatewayRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref IngressRouteTable
+      GatewayId: !Ref Igw
+  IngressRouteTableElbSubnet1Route:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVpcAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref ElbSubnet1Cidr
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub1
+      RouteTableId: !Ref IngressRouteTable
+  IngressRouteTableElbSubnet2Route:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVpcAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref ElbSubnet2Cidr
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub2
+      RouteTableId: !Ref IngressRouteTable
+  IngressRouteTableElbSubnet3Route:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVpcAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref ElbSubnet3Cidr
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub3
+      RouteTableId: !Ref IngressRouteTable
+  #-- Firewall Subnet Route Table:
+  FwSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-FwSubnet-route-table"
+  VpcInternetRoteOnFwSubnetRouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref FwSubnetRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref Igw
+    DependsOn:
+          - AttachIgw
+  #-- Attache to Fw subnets
+  FwSubnetRouteTableAssociationFwSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FwSubnet1
+      RouteTableId: !Ref FwSubnetRouteTable
+  FwSubnetRouteTableAssociationFwSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FwSubnet2
+      RouteTableId: !Ref FwSubnetRouteTable
+  FwSubnetRouteTableAssociationFwSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FwSubnet3
+      RouteTableId: !Ref FwSubnetRouteTable
+  #-- ELB Subnet Route Table:
+  ElbSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-ElbSubnet1-route-table"
+  AttachDefaultGwToElbSubnet1RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref ElbSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub1
+  #--
+  ElbSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-ElbSubnet2-route-table"
+  AttachDefaultGwToElbSubnet2RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref ElbSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub2
+  #--
+  ElbSubnet3RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-ElbSubnet3-route-table"
+  AttachDefaultGwToElbSubnet3RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref ElbSubnet3RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub3
+  #-- Attache to ELB subnets
+  ElbSubnet1RouteTableAssociationElbSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ElbSubnet1
+      RouteTableId: !Ref ElbSubnet1RouteTable
+  ElbSubnet2RouteTableAssociationElbSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ElbSubnet2
+      RouteTableId: !Ref ElbSubnet2RouteTable
+  ElbSubnet3RouteTableAssociationElbSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ElbSubnet3
+      RouteTableId: !Ref ElbSubnet3RouteTable
+  #-- Resouce Subnet Route Table:
+  ResourceSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-ResourceSubnet-route-table"
+  #-- Attache to Resource subnets
+  ResourceSubnetRouteTableAssociationResourceSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ResourceSubnet1
+      RouteTableId: !Ref ResourceSubnetRouteTable
+  ResourceSubnetRouteTableAssociationResourceSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ResourceSubnet2
+      RouteTableId: !Ref ResourceSubnetRouteTable
+  ResourceSubnetRouteTableAssociationResourceSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ResourceSubnet3
+      RouteTableId: !Ref ResourceSubnetRouteTable
+  #-- Tgw Route Table:
+  TgwSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-TgwSubnet-route-table"
+  #-- Attache to Tgw subnets
+  TgwSubnetRouteTableAssociationTgwSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet1
+      RouteTableId: !Ref TgwSubnetRouteTable
+  TgwSubnetRouteTableAssociationTgwSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet2
+      RouteTableId: !Ref TgwSubnetRouteTable
+  TgwSubnetRouteTableAssociationTgwSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet3
+      RouteTableId: !Ref TgwSubnetRouteTable
+  #------------------ Cloudwatch log for Flowlog
+  VPCFlowlog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt FlowlogRole.Arn
+      LogGroupName: !Sub VPCFlowLogs/${VpcName}
+      ResourceId: !Ref Vpc
+      ResourceType: VPC
+      TrafficType: ALL
+#------------------------------------------------------------
+Outputs:
+  #------------------ VPC
+  VpcId:
+    Description:  VPC ID
+    Value: !Ref Vpc
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcId"
+  VpcCidr:
+    Description:  VPC CIDR
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcCidr"
+  #------------------ Subnet ID
+  FwSubnet1Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet1Id"
+  FwSubnet2Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet2Id"
+  FwSubnet3Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet3Id"
+  #--
+  ElbSubnet1Id:
+    Description: ELB Subnet1 ID in the VPC
+    Value: !Ref ElbSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-ElbSubnet1Id"
+  ElbSubnet2Id:
+    Description: ELB Subnet2 ID in the VPC
+    Value: !Ref ElbSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-ElbSubnet2Id"
+  ElbSubnet3Id:
+    Description: ELB Subnet3 ID in the VPC
+    Value: !Ref ElbSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-ElbSubnet3Id"
+  #--
+  ResourceSubnet1Id:
+    Description: Resource Subnet1 ID in the VPC
+    Value: !Ref ResourceSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-ResourceSubnet1Id"
+  ResourceSubnet2Id:
+    Description: Resource Subnet2 ID in the VPC
+    Value: !Ref ResourceSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-ResourceSubnet2Id"
+  ResourceSubnet3Id:
+    Description: Resource Subnet3 ID in the VPC
+    Value: !Ref ResourceSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-ResourceSubnet3Id"
+  #--
+  TgwSubnet1Id:
+    Description: TransitGateway Subnet1 ID in the VPC
+    Value: !Ref TgwSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet1Id"
+  TgwSubnet2Id:
+    Description: TransitGateway Subnet2 ID in the VPC
+    Value: !Ref TgwSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet2Id"
+  TgwSubnet3Id:
+    Description: TransitGateway Subnet3 ID in the VPC
+    Value: !Ref TgwSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet3Id"
+  #------------------ Subnet CIDR
+  FwSubnet1Cidr:
+    Description: CIDR of Firewall Subnet1 in the VPC
+    Value: !Ref FwSubnet1Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet1Cidr"
+  FwSubnet2Cidr:
+    Description: CIDR of Firewall Subnet2 in the VPC
+    Value: !Ref FwSubnet2Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet2Cidr"
+  FwSubnet3Cidr:
+    Description: CIDR of Firewall Subnet3 in the VPC
+    Value: !Ref FwSubnet3Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet3Cidr"
+  #--
+  ElbSubnet1Cidr:
+    Description: CIDR of ELB Subnet1 in the VPC
+    Value: !Ref ElbSubnet1Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-ElbSubnet1Cidr"
+  ElbSubnet2Cidr:
+    Description: CIDR of ELB Subnet2 in the VPC
+    Value: !Ref ElbSubnet2Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-ElbSubnet2Cidr"
+  ElbSubnet3Cidr:
+    Description: CIDR of ELB Subnet3 in the VPC
+    Value: !Ref ElbSubnet3Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-ElbSubnet3Cidr"
+  #--
+  ResourceSubnet1Cidr:
+    Description: CIDR of Resource Subnet1 in the VPC
+    Value: !Ref ResourceSubnet1Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-ResourceSubnet1Cidr"
+  ResourceSubnet2Cidr:
+    Description: CIDR of Resource Subnet2 in the VPC
+    Value: !Ref ResourceSubnet2Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-ResourceSubnet2Cidr"
+  ResourceSubnet3Cidr:
+    Description: CIDR of Resource Subnet3 in the VPC
+    Value: !Ref ResourceSubnet3Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-ResourceSubnet3Cidr"
+  #------------------ route tables
+  FwSubnetRouteTableId:
+    Description: Route table for Firewall Subnets
+    Value: !Ref FwSubnetRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnetRouteTableId"
+  ElbSubnet1RouteTableId:
+    Description: Route table for ELB Subnets
+    Value: !Ref ElbSubnet1RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-ElbSubnet1RouteTableId"
+  ResourceSubnetRouteTableId:
+    Description: Route table for Resource Subnets
+    Value: !Ref ResourceSubnetRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-ResourceSubnetRouteTableId"
+  TgwSubnetRouteTableId:
+    Description: Route table for TGW Subnets
+    Value: !Ref TgwSubnetRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnetRouteTableId"
+  #------------------ Default setting
+  DefaultSecurityGroupId:
+    Description: Default Security Group Id
+    Value: !GetAtt Vpc.DefaultSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-DefaultSecurityGroupId
+  #------------------ Firewall
+  SpokeVpcAFirewallId:
+    Description: Id of the Firewall
+    Value: !GetAtt SpokeVpcAFirewall.FirewallId
+    Export:
+      Name: !Sub ${AWS::StackName}-SpokeVpcAFirewallId
+  SpokeVpcAFirewallArn:
+    Description: Arn of the Firewall
+    Value: !GetAtt SpokeVpcAFirewall.FirewallArn
+    Export:
+      Name: !Sub ${AWS::StackName}-SpokeVpcAFirewallArn
