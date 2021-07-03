@@ -244,7 +244,6 @@ aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-SystemAVpcAttachTgw \
     --template-body "file://./src/SystemA-Vpc/attach-tgw-to-SystemAVpc.yaml" ;
 ```
-
 ### (5)-(d) オンプレルートの個別追加
 2021.6月時点で、CFnのRoute作成でManaged Prefixが対応していないため、CLIでルートを追加する
 ```shell
@@ -274,20 +273,14 @@ aws --profile ${PROFILE} \
     --transit-gateway-id ${OnpreTgwId} ;
 
 ```
-
-
-
-
-### (3)-(d) VPC Endpointsの作成
+### (5)-(e) VPC Endpointsの作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
-    --stack-name NwfwPoC-SystemBVpcVpce \
-    --template-body "file://./src/SystemB-Vpc/vpce.yaml" ;
+    --stack-name NwfwPoC-SystemAVpcVpce \
+    --template-body "file://./src/SystemA-Vpc/systema-vpce.yaml" ;
 ```
 
-
-
-### (3)-(e) EC2インスタンスの作成
+### (5)-(f) EC2インスタンス(WebServer)の作成
 Amazon Linux2の最新AMIのIDを取得します。
 ```shell
 #インスタンス設定
