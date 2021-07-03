@@ -624,69 +624,37 @@ Resources:
       VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub3
       RouteTableId: !Ref IngressRouteTable
   #-- Firewall Route Table:
-  FwSubnet1RouteTable:
+  FwSubnetRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref Vpc
       Tags:
         - Key: Name
-          Value: !Sub "${VpcName}-FwSubnet1-route-table"
-  VpcInternetRoteOnFwSubnet1RouteTable:
+          Value: !Sub "${VpcName}-FwSubnet-route-table"
+  VpcInternetRoteOnFwSubnetRouteTable:
     Type: AWS::EC2::Route
     Properties:
-      RouteTableId: !Ref FwSubnet1RouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref Igw
-    DependsOn:
-          - AttachIgw
-  #--
-  FwSubnet2RouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref Vpc
-      Tags:
-        - Key: Name
-          Value: !Sub "${VpcName}-FwSubnet2-route-table"
-  VpcInternetRoteOnFwSubnet2RouteTable:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref FwSubnet2RouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref Igw
-    DependsOn:
-          - AttachIgw
-  #--
-  FwSubnet3RouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref Vpc
-      Tags:
-        - Key: Name
-          Value: !Sub "${VpcName}-FwSubnet3-route-table"
-  VpcInternetRoteOnFwSubnet3RouteTable:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref FwSubnet3RouteTable
+      RouteTableId: !Ref FwSubnetRouteTable
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref Igw
     DependsOn:
           - AttachIgw
   #-- Attache to Fw subnets
-  FwSubnet1RouteTableAssociationFwSubnet1:
+  FwSubnetRouteTableAssociationFwSubnet1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref FwSubnet1
-      RouteTableId: !Ref FwSubnet1RouteTable
-  FwSubnet2RouteTableAssociationFwSubnet2:
+      RouteTableId: !Ref FwSubnetRouteTable
+  FwSubnetRouteTableAssociationFwSubnet2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref FwSubnet2
-      RouteTableId: !Ref FwSubnet2RouteTable
-  FwSubnet3RouteTableAssociationFwSubnet3:
+      RouteTableId: !Ref FwSubnetRouteTable
+  FwSubnetRouteTableAssociationFwSubnet3:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref FwSubnet3
-      RouteTableId: !Ref FwSubnet3RouteTable
+      RouteTableId: !Ref FwSubnetRouteTable
   #-- Nat Route Table:
   NatSubnet1RouteTable:
     Type: AWS::EC2::RouteTable
@@ -905,21 +873,11 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-NatSubnet3Cidr"
   #------------------ route tables
-  FwSubnet1RouteTableId:
-    Description: Route table for Firewall Subnet1
-    Value: !Ref FwSubnet1RouteTable
+  FwSubnetRouteTableId:
+    Description: Route table for Firewall Subnets
+    Value: !Ref FwSubnetRouteTable
     Export:
-      Name: !Sub "${AWS::StackName}-FwSubnet1RouteTableId"
-  FwSubnet2RouteTableId:
-    Description: Route table for Firewall Subnet2
-    Value: !Ref FwSubnet2RouteTable
-    Export:
-      Name: !Sub "${AWS::StackName}-FwSubnet2RouteTableId"
-  FwSubnet3RouteTableId:
-    Description: Route table for Firewall Subnet3
-    Value: !Ref FwSubnet3RouteTable
-    Export:
-      Name: !Sub "${AWS::StackName}-FwSubnet3RouteTableId"
+      Name: !Sub "${AWS::StackName}-FwSubnetRouteTableId"
   #--
   NatSubnet1RouteTableId:
     Description: Route table for Nat Subnet1
