@@ -1,0 +1,938 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploy System's VPC with Ingress route
+#----------------------------------------------
+Parameters:
+  #------------------
+  VpcName:
+    Description: Name for the VPC
+    Type: String
+    Default: OutboundVPC
+    ConstraintDescription: Can contain only ASCII characters.
+  VpcCidr:
+    Description: CIDR Block for the VPC
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.0/24
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.0.0/16
+  VpcCidrForIngress:
+    Description: CIDR Block for the VPC's Ingress subnets
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 192.168.0.0/24
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.0.0/16
+  DnsSupport:
+    Type: String
+    Default: true
+    AllowedValues:
+      - true
+      - false
+  DnsHostnames:
+    Type: String
+    Default: true
+    AllowedValues:
+      - true
+      - false
+  #---
+  DhcpOptionsDomainNameServers1:
+    Description: "The IPv4 addresses of a 1st domain name servers, or AmazonProvidedDNS"
+    Type: String
+    Default: "AmazonProvidedDNS"
+  DhcpOptionsDomainNameServers2:
+    Description: "The IPv4 addresses of a 2nd domain name servers, or Blank"
+    Type: String
+    Default: ""
+  DhcpOptionsNtpServers1:
+    Description: "The IPv4 addresses of a 1st Network Time Protocol (NTP) servers."
+    Type: String
+    Default: 169.254.169.123
+  DhcpOptionsNtpServers2:
+    Description: "The IPv4 addresses of a 2nd Network Time Protocol (NTP) servers or blank."
+    Type: String
+    Default: ""
+  #---
+  FwSubnet1Name:
+    Description: Name for the Firewall Subnet 1
+    Type: String
+    Default: FwSub1
+  FwSubnet1Cidr:
+    Description: CIDR Block for the Firewall subnet 1
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.128/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  FwSubnet2Name:
+    Description: Name for the Firewall Subnet 2
+    Type: String
+    Default: FwSub2
+  FwSubnet2Cidr:
+    Description: CIDR Block for the Firewall subnet 2
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.144/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  FwSubnet3Name:
+    Description: Name for the Firewall Subnet 3
+    Type: String
+    Default: FwSub3
+  FwSubnet3Cidr:
+    Description: CIDR Block for the Firewall subnet 3
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.160/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  NatSubnet1Name:
+    Description: Name for the Nat Subnet 1
+    Type: String
+    Default: NatSub1
+  NatSubnet1Cidr:
+    Description: CIDR Block for the Nat subnet 1
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.64/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  NatSubnet2Name:
+    Description: Name for the Nat Subnet 2
+    Type: String
+    Default: NatSub2
+  NatSubnet2Cidr:
+    Description: CIDR Block for the Nat subnet 2
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.80/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  NatSubnet3Name:
+    Description: Name for the Nat Subnet 3
+    Type: String
+    Default: NatSub3
+  NatSubnet3Cidr:
+    Description: CIDR Block for the Nat subnet 3
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.96/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  TgwSubnet1Name:
+    Description: Name for the TransitGateway Subnet 1
+    Type: String
+    Default: TgwSub1
+  TgwSubnet1Cidr:
+    Description: CIDR Block for the TransitGateway subnet 1
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.192/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  TgwSubnet2Name:
+    Description: Name for the TransitGateway Subnet 2
+    Type: String
+    Default: TgwSub2
+  TgwSubnet2Cidr:
+    Description: CIDR Block for the TransitGateway subnet 2
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.208/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #---
+  TgwSubnet3Name:
+    Description: Name for the TransitGateway Subnet 3
+    Type: String
+    Default: TgwSub3
+  TgwSubnet3Cidr:
+    Description: CIDR Block for the TransitGateway subnet 3
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 10.1.1.224/28
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: Must be like 10.1.1.0/24
+  #------------------
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      -
+        Label:
+          default: "VPC Configurations"
+        Parameters:
+          - VpcName
+          - VpcCidr
+          - VpcCidrForIngress
+          - DnsSupport
+          - DnsHostnames
+      -
+        Label:
+          default: "VPC DHCP Options Configurations"
+        Parameters:
+          - DhcpOptionsDomainNameServers1
+          - DhcpOptionsDomainNameServers2
+          - DhcpOptionsNtpServers1
+          - DhcpOptionsNtpServers2
+      -
+        Label:
+          default: "Subnets Configurations"
+        Parameters:
+          - FwSubnet1Name
+          - FwSubnet1Cidr
+          - FwSubnet2Name
+          - FwSubnet2Cidr
+          - FwSubnet3Name
+          - FwSubnet3Cidr
+          - NatSubnet1Name
+          - NatSubnet1Cidr
+          - NatSubnet2Name
+          - NatSubnet2Cidr
+          - NatSubnet3Name
+          - NatSubnet3Cidr
+          - TgwSubnet1Name
+          - TgwSubnet1Cidr
+          - TgwSubnet2Name
+          - TgwSubnet2Cidr
+          - TgwSubnet3Name
+          - TgwSubnet3Cidr
+#----------------------------------------------
+Resources:
+  #------------------ VPC FlowLog Role
+  FlowlogRole:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: "Flowlog"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement: 
+              - Effect: Allow
+                Action: 
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:DescribeLogGroups"
+                  - "logs:DescribeLogStreams"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+  #------------------ VPC
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: !Ref DnsSupport
+      EnableDnsHostnames: !Ref DnsHostnames
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-OutboundVpc
+  #------------------ DHCP Options
+  DhcpOptions:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainNameServers:
+        - !Ref DhcpOptionsDomainNameServers1
+        - !Ref DhcpOptionsDomainNameServers2
+      NtpServers: 
+        - !Ref DhcpOptionsNtpServers1
+        - !Ref DhcpOptionsNtpServers2
+      Tags: 
+        - Key: Name
+          Value: NwfwPoC-OutboundVpc-DhcpOptions
+  AssociationDhcpOptionsToVpc:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties:
+      DhcpOptionsId: !Ref DhcpOptions
+      VpcId: !Ref Vpc
+  #------------------ Internet GW
+  Igw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-OutboundVpc-Igw
+  AttachIgw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref Igw
+      VpcId: !Ref Vpc
+  #------------------ Subnet
+  #-- Firewall Subnets
+  FwSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref FwSubnet1Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 0
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${FwSubnet1Name}
+  FwSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref FwSubnet2Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 1
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${FwSubnet2Name}
+  FwSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref FwSubnet3Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 2
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${FwSubnet3Name}
+  #-- Nat Subnets
+  NatSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref NatSubnet1Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 0
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${NatSubnet1Name}
+  NatSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref NatSubnet2Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 1
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${NatSubnet2Name}
+  NatSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref NatSubnet3Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 2
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${NatSubnet3Name}
+  #-- Tgw Subnets
+  TgwSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref TgwSubnet1Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 0
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${TgwSubnet1Name}
+  TgwSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref TgwSubnet2Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 1
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${TgwSubnet2Name}
+  TgwSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref TgwSubnet3Cidr
+      VpcId: !Ref Vpc
+      AvailabilityZone: !Select
+      - 2
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${VpcName}-${TgwSubnet3Name}
+  #------------------ Firewall
+  SpokeVpcAFirewall:
+    Type: AWS::NetworkFirewall::Firewall
+    Properties:
+      FirewallName: !Sub "${VpcName}-firewall"
+      FirewallPolicyArn:
+        Fn::ImportValue: NwfwPoC-NwfwPolicies-EgressFirewallPolicyArn
+      VpcId: !Ref Vpc
+      SubnetMappings:
+        - SubnetId: !Ref FwSubnet1
+        - SubnetId: !Ref FwSubnet2
+        - SubnetId: !Ref FwSubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-firewall"
+  #--Firewall Log Configuration
+  SpokeVpcAFirewallLogFlowGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${AWS::StackName}/anfw/flow"
+  SpokeVpcAFirewallLogAlertGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/${AWS::StackName}/anfw/alert"
+  SpokeVpcAFirewallLog:
+    Type: AWS::NetworkFirewall::LoggingConfiguration
+    Properties:
+      FirewallArn: !Ref SpokeVpcAFirewall
+      LoggingConfiguration:
+        LogDestinationConfigs:
+          - LogType: FLOW
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: !Sub "/${AWS::StackName}/anfw/flow"
+          - LogType: ALERT
+            LogDestinationType: CloudWatchLogs
+            LogDestination:
+              logGroup: !Sub "/${AWS::StackName}/anfw/alert"
+  #------------------ Firewall Retrieve 
+  #Retrieve VpceId Lambda Custom Resource:
+  #Comment: 
+  #  Since there is no way to get the endpoint ID of Network Firewall 
+  #  for each subnet in standard CloudFormation, use Custom Type and 
+  #  Lambda functions to get the VPC endpoint of Firewall for each subnet.
+  #-- IAM Role for Lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt RetrieveVpcIdLogGroup.Arn
+              - Effect: Allow
+                Action:
+                  - network-firewall:DescribeFirewall
+                Resource: "*"
+  #-- Logs
+  RetrieveVpcIdLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+        LogGroupName: !Sub /aws/lambda/${AWS::StackName}-retrieve-vpceid
+        RetentionInDays: 1
+  #-- Lambda Function
+  RetrieveVpceId:
+    Type: AWS::Lambda::Function
+    DependsOn: RetrieveVpcIdLogGroup
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-retrieve-vpceid
+      Handler: "index.handler"
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import json
+          import logging
+
+          def GetVpcid(NfwResponse, SubnetId):
+            VpceId = 'NULL'
+            for Az in NfwResponse['FirewallStatus']['SyncStates'].values():
+              if Az['Attachment']['SubnetId'] == SubnetId:
+                VpceId = Az['Attachment']['EndpointId']
+                break
+            return VpceId
+
+          def handler(event, context):
+              logger = logging.getLogger()
+              logger.setLevel(logging.INFO)
+              responseData = {}
+              responseStatus = cfnresponse.FAILED
+              logger.info('Received event: {}'.format(json.dumps(event)))
+              if event["RequestType"] == "Delete":
+                  responseStatus = cfnresponse.SUCCESS
+                  cfnresponse.send(event, context, responseStatus, responseData)
+              else:
+                try:
+                  FwSubnet1 = event["ResourceProperties"]["FwSub1"]
+                  FwSubnet2 = event["ResourceProperties"]["FwSub2"]
+                  FwSubnet3 = event["ResourceProperties"]["FwSub3"]
+                  FwArn = event["ResourceProperties"]["FwArn"]
+                except Exception as e:
+                  logger.info('AZ retrieval failure: {}'.format(e))
+                try:
+                  nfw = boto3.client('network-firewall')
+                except Exception as e:
+                  logger.info('boto3.client failure: {}'.format(e))
+                try:
+                  NfwResponse=nfw.describe_firewall(FirewallArn=FwArn)
+                  VpceIdInFwSub1 = GetVpcid(NfwResponse, FwSubnet1)
+                  VpceIdInFwSub2 = GetVpcid(NfwResponse, FwSubnet2)
+                  VpceIdInFwSub3 = GetVpcid(NfwResponse, FwSubnet3)
+                except Exception as e:
+                  logger.info('ec2.describe_firewall failure: {}'.format(e))
+                responseData['VpceIdInFwSub1'] = VpceIdInFwSub1
+                responseData['VpceIdInFwSub2'] = VpceIdInFwSub2
+                responseData['VpceIdInFwSub3'] = VpceIdInFwSub3
+                responseStatus = cfnresponse.SUCCESS
+                cfnresponse.send(event, context, responseStatus, responseData)
+      Runtime: python3.7
+      Timeout: 30
+  #---- Custom Type
+  FirewallVpceIds:
+    Type: Custom::DescribeVpcEndpoints
+    Properties:
+      ServiceToken: !GetAtt RetrieveVpceId.Arn
+      FwSub1: !Ref FwSubnet1
+      FwSub2: !Ref FwSubnet2
+      FwSub3: !Ref FwSubnet3
+      FwArn: !Ref SpokeVpcAFirewall
+
+  #------------------ Nat GW
+  NatGw1:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachIgw
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EipNatGw1
+        - AllocationId
+      SubnetId:
+        Ref: NatSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatGW1"
+  EipNatGw1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  #---
+  NatGw2:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachIgw
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EipNatGw2
+        - AllocationId
+      SubnetId:
+        Ref: NatSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatGW2"
+  EipNatGw2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  #---
+  NatGw3:
+    Type: AWS::EC2::NatGateway
+    DependsOn: AttachIgw
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EipNatGw3
+        - AllocationId
+      SubnetId:
+        Ref: NatSubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatGW3"
+  EipNatGw3:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  #------------------ Route Table
+  #-- Ingress Route Table:
+  IngressRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-ingress-route-table"
+  IngressRouteTableAssociation:
+    Type: AWS::EC2::GatewayRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref IngressRouteTable
+      GatewayId: !Ref Igw
+  IngressRouteTableNatSubnet1Route:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVpcAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref NatSubnet1Cidr
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub1
+      RouteTableId: !Ref IngressRouteTable
+  IngressRouteTableNatSubnet2Route:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVpcAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref NatSubnet2Cidr
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub2
+      RouteTableId: !Ref IngressRouteTable
+  IngressRouteTableNatSubnet3Route:
+    Type: AWS::EC2::Route
+    DependsOn: SpokeVpcAFirewall
+    Properties:
+      DestinationCidrBlock: !Ref NatSubnet3Cidr
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub3
+      RouteTableId: !Ref IngressRouteTable
+  #-- Firewall Route Table:
+  FwSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-FwSubnet-route-table"
+  VpcInternetRoteOnFwSubnetRouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref FwSubnetRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref Igw
+    DependsOn:
+          - AttachIgw
+  #-- Attache to Fw subnets
+  FwSubnetRouteTableAssociationFwSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FwSubnet1
+      RouteTableId: !Ref FwSubnetRouteTable
+  FwSubnetRouteTableAssociationFwSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FwSubnet2
+      RouteTableId: !Ref FwSubnetRouteTable
+  FwSubnetRouteTableAssociationFwSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FwSubnet3
+      RouteTableId: !Ref FwSubnetRouteTable
+  #-- Nat Route Table:
+  NatSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatSubnet1-route-table"
+  AttachDefaultGwToNatSubnet1RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub1
+  #--
+  NatSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatSubnet2-route-table"
+  AttachDefaultGwToNatSubnet2RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub2
+  #--
+  NatSubnet3RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-NatSubnet3-route-table"
+  AttachDefaultGwToNatSubnet3RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref NatSubnet3RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      VpcEndpointId: !GetAtt FirewallVpceIds.VpceIdInFwSub3
+  #-- Attache to Nat subnets
+  NatSubnet1RouteTableAssociationNatSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatSubnet1
+      RouteTableId: !Ref NatSubnet1RouteTable
+  NatSubnet2RouteTableAssociationNatSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatSubnet2
+      RouteTableId: !Ref NatSubnet2RouteTable
+  NatSubnet3RouteTableAssociationNatSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref NatSubnet3
+      RouteTableId: !Ref NatSubnet3RouteTable
+  #-- Tgw Route Table:
+  TgwSubnet1RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-TgwSubnet1-route-table"
+  AttachDefaultGwToTgwSubnet1RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TgwSubnet1RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGw1
+  #--
+  TgwSubnet2RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-TgwSubnet2-route-table"
+  AttachDefaultGwToTgwSubnet2RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TgwSubnet2RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGw2
+  #--
+  TgwSubnet3RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${VpcName}-TgwSubnet3-route-table"
+  AttachDefaultGwToTgwSubnet3RouteTable:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TgwSubnet3RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGw3
+  #-- Attache to Tgw subnets
+  TgwSubnet1RouteTableAssociationTgwSubnet1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet1
+      RouteTableId: !Ref TgwSubnet1RouteTable
+  TgwSubnet2RouteTableAssociationTgwSubnet2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet2
+      RouteTableId: !Ref TgwSubnet2RouteTable
+  TgwSubnet3RouteTableAssociationTgwSubnet3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref TgwSubnet3
+      RouteTableId: !Ref TgwSubnet3RouteTable
+  #------------------ Cloudwatch log for Flowlog
+  VPCFlowlog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt FlowlogRole.Arn
+      LogGroupName: !Sub VPCFlowLogs/${VpcName}
+      ResourceId: !Ref Vpc
+      ResourceType: VPC
+      TrafficType: ALL
+Outputs:
+  #------------------ VPC
+  VpcId:
+    Description:  VPC ID
+    Value: !Ref Vpc
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcId"
+  VpcCidr:
+    Description:  VPC CIDR
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcCidr"
+  #------------------ Subnet ID
+  FwSubnet1Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet1Id"
+  FwSubnet2Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet2Id"
+  FwSubnet3Id:
+    Description: Firewall Subnet1 ID in the VPC
+    Value: !Ref FwSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet3Id"
+  #--
+  NatSubnet1Id:
+    Description: Nat Subnet1 ID in the VPC
+    Value: !Ref NatSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet1Id"
+  NatSubnet2Id:
+    Description: Nat Subnet2 ID in the VPC
+    Value: !Ref NatSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet2Id"
+  NatSubnet3Id:
+    Description: Nat Subnet3 ID in the VPC
+    Value: !Ref NatSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet3Id"
+  #--
+  TgwSubnet1Id:
+    Description: TransitGateway Subnet1 ID in the VPC
+    Value: !Ref TgwSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet1Id"
+  TgwSubnet2Id:
+    Description: TransitGateway Subnet2 ID in the VPC
+    Value: !Ref TgwSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet2Id"
+  TgwSubnet3Id:
+    Description: TransitGateway Subnet3 ID in the VPC
+    Value: !Ref TgwSubnet3
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet3Id"
+  #------------------ Subnet CIDR
+  FwSubnet1Cidr:
+    Description: CIDR of Firewall Subnet1 in the VPC
+    Value: !Ref FwSubnet1Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet1Cidr"
+  FwSubnet2Cidr:
+    Description: CIDR of Firewall Subnet2 in the VPC
+    Value: !Ref FwSubnet2Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet2Cidr"
+  FwSubnet3Cidr:
+    Description: CIDR of Firewall Subnet3 in the VPC
+    Value: !Ref FwSubnet3Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnet3Cidr"
+  #--
+  NatSubnet1Cidr:
+    Description: CIDR of NAT Subnet1 in the VPC
+    Value: !Ref NatSubnet1Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet1Cidr"
+  NatSubnet2Cidr:
+    Description: CIDR of NAT Subnet2 in the VPC
+    Value: !Ref NatSubnet2Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet2Cidr"
+  NatSubnet3Cidr:
+    Description: CIDR of NAT Subnet3 in the VPC
+    Value: !Ref NatSubnet3Cidr
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet3Cidr"
+  #------------------ route tables
+  FwSubnetRouteTableId:
+    Description: Route table for Firewall Subnets
+    Value: !Ref FwSubnetRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-FwSubnetRouteTableId"
+  #--
+  NatSubnet1RouteTableId:
+    Description: Route table for Nat Subnet1
+    Value: !Ref NatSubnet1RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet1RouteTableId"
+  NatSubnet2RouteTableId:
+    Description: Route table for Nat Subnet2
+    Value: !Ref NatSubnet2RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet2RouteTableId"
+  NatSubnet3RouteTableId:
+    Description: Route table for Nat Subnet3
+    Value: !Ref NatSubnet3RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-NatSubnet3RouteTableId"
+  #--
+  TgwSubnet1RouteTableId:
+    Description: Route table for TransitGateway Subnet1
+    Value: !Ref TgwSubnet1RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet1RouteTableId"
+  TgwSubnet2RouteTableId:
+    Description: Route table for TransitGateway Subnet2
+    Value: !Ref TgwSubnet2RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet2RouteTableId"
+  TgwSubnet3RouteTableId:
+    Description: Route table for TransitGateway Subnet3
+    Value: !Ref TgwSubnet3RouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-TgwSubnet3RouteTableId"
+  #------------------ Default setting
+  DefaultSecurityGroupId:
+    Description: Default Security Group Id
+    Value: !GetAtt Vpc.DefaultSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-DefaultSecurityGroupId
+  #------------------ Firewall
+  SpokeVpcAFirewallId:
+    Description: Id of the Firewall
+    Value: !GetAtt SpokeVpcAFirewall.FirewallId
+    Export:
+      Name: !Sub ${AWS::StackName}-SpokeVpcAFirewallId
+  SpokeVpcAFirewallArn:
+    Description: Arn of the Firewall
+    Value: !GetAtt SpokeVpcAFirewall.FirewallArn
+    Export:
+      Name: !Sub ${AWS::StackName}-SpokeVpcAFirewallArn
