@@ -171,7 +171,7 @@ aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-NwfwPolicies \
     --template-body "file://./src/Outbound-Vpc/firewall-policy.yaml" ;
 ```
-### (4)-(b) VPC作成
+### (4)-(b) Outbound VPC作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-OutboundVpc \
@@ -222,4 +222,19 @@ do
       --destination-prefix-list-id ${VpcsPrefixListId} \
       --transit-gateway-id ${VpcsTgwId} ;
 done
+```
+
+## (5)SystemAVPC環境
+### (5)-(a) SystemA Inbound用Network FireWall Policy作成
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-SystemAIngressNwfwPolicies \
+    --template-body "file://./src/SystemA-Vpc/firewall-policy-for-ingress.yaml" ;
+```
+### (5)-(b) System-A VPC作成
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-SystemAVpc \
+    --template-body "file://./src/SystemA-Vpc/systema-vpc.yaml" \
+    --capabilities CAPABILITY_NAMED_IAM ;
 ```
