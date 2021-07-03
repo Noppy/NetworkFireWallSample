@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Deploy Network Firewall policies for Ingress
+Resources:
+  #------------------ Firewall Policies
+  IngressFirewallPolicy:
+    Type: AWS::NetworkFirewall::FirewallPolicy
+    Properties:
+      FirewallPolicyName: !Sub "${AWS::StackName}-inbound-firewall-policy"
+      FirewallPolicy:
+        StatelessDefaultActions:
+          - 'aws:forward_to_sfe'
+        StatelessFragmentDefaultActions:
+          - 'aws:forward_to_sfe'
+        StatefulRuleGroupReferences:
+          - ResourceArn: !Ref HttpAndHttpsAllowStatefulRuleGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-inbound-firewall-policy"
+  HttpAndHttpsAllowStatefulRuleGroup:
+    Type: 'AWS::NetworkFirewall::RuleGroup'
+    Properties:
+      RuleGroupName: !Sub "${AWS::StackName}-HttpAndHttps-allow"
+      Type: STATEFUL
+      Capacity: 100
+      RuleGroup:
+        RulesSource:
+          StatefulRules:
+            - Action: "PASS"
+              Header:
+                Destination: "ANY"
+                DestinationPort: "80"
+                Direction: "ANY"
+                Protocol: "TCP"
+                Source: "ANY"
+                SourcePort: "ANY"
+              RuleOptions:
+                - Keyword: "sid:1"
+            - Action: "PASS"
+              Header:
+                Destination: "ANY"
+                DestinationPort: "443"
+                Direction: "ANY"
+                Protocol: "TCP"
+                Source: "ANY"
+                SourcePort: "ANY"
+              RuleOptions:
+                - Keyword: "sid:2"
+            - Action: "DROP"
+              Header:
+                Destination: "ANY"
+                DestinationPort: "ANY"
+                Direction: "ANY"
+                Protocol: "IP"
+                Source: "ANY"
+                SourcePort: "ANY"
+              RuleOptions:
+                - Keyword: "sid:3"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-HttpAndHttps-allow"   
+Outputs:
+  #------------------ Managed Prefix
+  IngressFirewallPolicyId:
+    Description: The ID of the IngressFirewallPolicy
+    Value: !GetAtt IngressFirewallPolicy.FirewallPolicyId
+    Export:
+      Name: !Sub ${AWS::StackName}-IngressFirewallPolicyId
+  IngressFirewallPolicyArn:
+    Description: The Arn of the IngressFirewallPolicy
+    Value: !GetAtt IngressFirewallPolicy.FirewallPolicyArn
+    Export:
+      Name: !Sub ${AWS::StackName}-IngressFirewallPolicyArn
