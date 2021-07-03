@@ -69,13 +69,13 @@ Resources:
           AssociatePublicIpAddress: false
       Tags:
         - Key: Name
-          Value: NwfwPoC-SystemB-Instance
+          Value: NwfwPoC-SystemB-Instance1
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
           # Update ALL rpms, and change hostname to Userfrendly name 
           yum -y update
-          hostnamectl set-hostname "SystemB-Instance"
+          hostnamectl set-hostname "SystemB-Instance1"
   InstanceAutoRecovery1:
     Type: AWS::CloudWatch::Alarm
     Condition: CheckAutoRecovery
@@ -111,13 +111,13 @@ Resources:
           AssociatePublicIpAddress: false
       Tags:
         - Key: Name
-          Value: NwfwPoC-SystemB-Instance
+          Value: NwfwPoC-SystemB-Instance2
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
           # Update ALL rpms, and change hostname to Userfrendly name 
           yum -y update
-          hostnamectl set-hostname "SystemB-Instance"
+          hostnamectl set-hostname "SystemB-Instance2"
   InstanceAutoRecovery2:
     Type: AWS::CloudWatch::Alarm
     Condition: CheckAutoRecovery
@@ -154,13 +154,13 @@ Resources:
           AssociatePublicIpAddress: false
       Tags:
         - Key: Name
-          Value: NwfwPoC-SystemB-Instance
+          Value: NwfwPoC-SystemB-Instance3
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
           # Update ALL rpms, and change hostname to Userfrendly name 
           yum -y update
-          hostnamectl set-hostname "SystemB-Instance"
+          hostnamectl set-hostname "SystemB-Instance3"
   InstanceAutoRecovery3:
     Type: AWS::CloudWatch::Alarm
     Condition: CheckAutoRecovery
