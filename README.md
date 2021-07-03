@@ -160,7 +160,7 @@ CFN_STACK_PARAMETERS='
 #インスタンスの作成
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-SystemBVpcInstance \
-    --template-body "file://./src/SystemB-Vpc/instance.yaml" \
+    --template-body "file://./src/SystemB-Vpc/instances.yaml" \
     --parameters "${CFN_STACK_PARAMETERS}" \
     --capabilities CAPABILITY_NAMED_IAM ;
 ```
