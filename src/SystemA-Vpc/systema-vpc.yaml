@@ -6,7 +6,7 @@ Parameters:
   VpcName:
     Description: Name for the VPC
     Type: String
-    Default: OutboundVPC
+    Default: NwfwPoC-SystemAVpc
     ConstraintDescription: Can contain only ASCII characters.
   VpcCidr:
     Description: CIDR Block for the VPC
@@ -295,7 +295,7 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: NwfwPoC-OutboundVpc
+          Value: !Sub ${VpcName}
   AddIngressCidrToVpc:
     Type: AWS::EC2::VPCCidrBlock
     Properties: 
@@ -437,7 +437,7 @@ Resources:
       CidrBlock: !Ref ResourceSubnet2Cidr
       VpcId: !Ref Vpc
       AvailabilityZone: !Select
-      - 0
+      - 1
       - Fn::GetAZs: !Ref 'AWS::Region'
       MapPublicIpOnLaunch: true
       Tags:
@@ -449,7 +449,7 @@ Resources:
       CidrBlock: !Ref ResourceSubnet3Cidr
       VpcId: !Ref Vpc
       AvailabilityZone: !Select
-      - 0
+      - 2
       - Fn::GetAZs: !Ref 'AWS::Region'
       MapPublicIpOnLaunch: true
       Tags:
