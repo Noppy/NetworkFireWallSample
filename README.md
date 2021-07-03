@@ -90,7 +90,7 @@ aws --profile ${PROFILE} cloudformation create-stack \
     --template-body "file://./src/SystemB-Vpc/attach-tgw.yaml" ;
 ```
 ### (3)-(c) オンプレルートの個別追加
-2021.6月時点で、CFnのRout作成でManaged Prefixが対応していないため、CLIでルートを追加する
+2021.6月時点で、CFnのRoute作成でManaged Prefixが対応していないため、CLIでルートを追加する
 ```shell
 #構成情報取得
 RouteTable1Id=$(aws --profile ${PROFILE} --output text \
@@ -224,7 +224,7 @@ do
 done
 ```
 
-## (5)SystemAVPC環境
+## (5)SystemA VPC環境
 ### (5)-(a) SystemA Inbound用Network FireWall Policy作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
@@ -236,5 +236,84 @@ aws --profile ${PROFILE} cloudformation create-stack \
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-SystemAVpc \
     --template-body "file://./src/SystemA-Vpc/systema-vpc.yaml" \
+    --capabilities CAPABILITY_NAMED_IAM ;
+```
+### (5)-(c) TGWsのアタッチ
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-SystemAVpcAttachTgw \
+    --template-body "file://./src/SystemA-Vpc/attach-tgw-to-SystemAVpc.yaml" ;
+```
+
+### (5)-(d) オンプレルートの個別追加
+2021.6月時点で、CFnのRoute作成でManaged Prefixが対応していないため、CLIでルートを追加する
+```shell
+#構成情報取得
+RouteTable1Id=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-SystemAVpc \
+  --query 'Stacks[].Outputs[?OutputKey==`ResourceSubnetRouteTableId`].[OutputValue]' )
+OnprePrefixListId=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-PrefixList \
+  --query 'Stacks[].Outputs[?OutputKey==`OnpremisPrefixId`].[OutputValue]' )
+OnpreTgwId=$(aws --profile ${PROFILE} --output text \
+  cloudformation describe-stacks \
+    --stack-name NwfwPoC-Tgw \
+  --query 'Stacks[].Outputs[?OutputKey==`OnpremisConnectTgwId`].[OutputValue]' )
+
+echo -n "RouteTable1Id     = ${RouteTable1Id}\nOnprePrefixListId = ${OnprePrefixListId}\nOnpreTgwId        = ${OnpreTgwId}\n"
+```
+ルートを追加します。
+```shell
+#オンプレ経由のルート追加
+aws --profile ${PROFILE} \
+  ec2 create-route \
+    --route-table-id ${RouteTable1Id} \
+    --destination-prefix-list-id ${OnprePrefixListId} \
+    --transit-gateway-id ${OnpreTgwId} ;
+
+```
+
+
+
+
+### (3)-(d) VPC Endpointsの作成
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-SystemBVpcVpce \
+    --template-body "file://./src/SystemB-Vpc/vpce.yaml" ;
+```
+
+
+
+### (3)-(e) EC2インスタンスの作成
+Amazon Linux2の最新AMIのIDを取得します。
+```shell
+#インスタンス設定
+AL2_AMIID=$(aws --profile ${PROFILE} --output text \
+    ec2 describe-images \
+        --owners amazon \
+        --filters 'Name=name,Values=amzn2-ami-hvm-2.0.????????.?-x86_64-gp2' \
+                  'Name=state,Values=available' \
+        --query 'reverse(sort_by(Images, &CreationDate))[:1].ImageId' ) ;
+echo  "AL2_AMIID = ${AL2_AMIID}"
+```
+上記情報を利用しインスタンスを作成します。
+```shell
+#パラメータ設定
+CFN_STACK_PARAMETERS='
+[
+  {
+    "ParameterKey": "AmiId",
+    "ParameterValue": "'"${AL2_AMIID}"'"
+  }
+]'
+
+#インスタンスの作成
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-SystemBVpcInstance \
+    --template-body "file://./src/SystemB-Vpc/instances.yaml" \
+    --parameters "${CFN_STACK_PARAMETERS}" \
     --capabilities CAPABILITY_NAMED_IAM ;
 ```

@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Attach SystemB-Vpc to TGWs
+#----------------------------------------------
+Resources:
+  #----------- for the VPCs Connection TGW
+  AttachVpcToVpcsConnectionTgw:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      TransitGatewayId:
+        Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwId
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemAVpc-VpcId
+      SubnetIds: 
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-TgwSubnet1Id
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-TgwSubnet2Id
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-TgwSubnet3Id
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-Attach-SystemAVpcAndVpcConnectionTgw"
+  AssociatTgwRouteTableToSystemBVpc:
+    Type: "AWS::EC2::TransitGatewayRouteTableAssociation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachVpcToVpcsConnectionTgw
+      TransitGatewayRouteTableId:
+        Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwRouteTableId
+  PropagateSystemBVpcToVpcConnectionTgwRouteTable:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachVpcToVpcsConnectionTgw
+      TransitGatewayRouteTableId:
+        Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwRouteTableId
+  #--------
+  AddRouteDefaultGwToSystemAVpcResourceRouteTable3:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Fn::ImportValue: NwfwPoC-SystemAVpc-ResourceSubnetRouteTableId
+        DestinationCidrBlock: 0.0.0.0/0
+        TransitGatewayId:
+          Fn::ImportValue: NwfwPoC-Tgw-VpcConnectTgwId
+      DependsOn:
+        - AttachVpcToVpcsConnectionTgw
+  #----------- for the On-Premis Connection TGW
+  AttachVpcToOnpremisConnectionTgw:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      TransitGatewayId:
+        Fn::ImportValue: NwfwPoC-Tgw-OnpremisConnectTgwId
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemAVpc-VpcId
+      SubnetIds: 
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-TgwSubnet1Id
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-TgwSubnet2Id
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-TgwSubnet3Id
+      Tags: 
+        - Key: "Name"
+          Value: "NwfwPoc-Attach-SystemBVpcAndOnpremisConnectionTgw"
+  AssociatOnpremisTgwRouteTableToSystemBVpc:
+    Type: "AWS::EC2::TransitGatewayRouteTableAssociation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachVpcToOnpremisConnectionTgw
+      TransitGatewayRouteTableId:
+        Fn::ImportValue: NwfwPoC-Tgw-OnpremisConnectTgwRouteTableId
+  PropagateSystemBVpcToOnpremisConnectionTgwRouteTable:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachVpcToOnpremisConnectionTgw
+      TransitGatewayRouteTableId:
+        Fn::ImportValue: NwfwPoC-Tgw-OnpremisConnectTgwRouteTableId
