@@ -1,0 +1,296 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deploy Instances
+#----------------------------------------------
+Parameters:
+  InstanceType:
+    Description: (Optional) Instance type
+    Type: String
+    Default: t3.large
+  AmiId:
+    Description: (Optional) AMI ID
+    Type: String
+    Default: ami-00d101850e971728d
+  AutoRecoveryMinutes:
+    Description: (optional) Auto Recovery Time(Minutes)
+    Type: Number
+    Default: 1
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      -
+        Label:
+          default:  Instances
+        Parameters:
+          - InstanceType
+          - AmiId
+          - AutoRecoveryMinutes
+#----------------------------------------------
+Conditions: 
+  CheckAutoRecovery: !Not [!Equals [!Ref AutoRecoveryMinutes, 0 ]]
+#----------------------------------------------
+Resources:
+  #------------------ IAM Role
+  InstanceRole:
+    Type: "AWS::IAM::Role"
+    Properties: 
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  InstanceRolePlofile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${AWS::StackName}-InstanceRolePlofile
+      Path: "/"
+      Roles:
+        - !Ref InstanceRole
+
+  #--------Security Group for WebServer
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: WebServer-InstanceSG
+      GroupDescription: SG for WebServer instances
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemAVpc-VpcId
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-SystemAVpc-WebServer-InstanceSG
+  WebServerSGHttpPort:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref WebServerSG
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+      CidrIp: 0.0.0.0/0
+  WebServerSGHttpsPort:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref WebServerSG
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+      CidrIp: 0.0.0.0/0
+  #------------------
+  Instance1:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub ${AmiId}
+      InstanceType: !Sub ${InstanceType}
+      IamInstanceProfile: !Ref InstanceRolePlofile
+      Monitoring: yes
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          SubnetId:
+            Fn::ImportValue: NwfwPoC-SystemAVpc-ResourceSubnet1Id
+          GroupSet:
+            - Fn::ImportValue: NwfwPoC-SystemAVpc-DefaultSecurityGroupId
+            - !Ref WebServerSG
+          AssociatePublicIpAddress: false
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-SystemA-WebInstance1
+      UserData:
+        Fn::Base64: 
+            !Sub |
+              #!/bin/bash -xe
+              # Update ALL rpms, and change hostname to Userfrendly name 
+              yum -y update
+              hostnamectl set-hostname "SystemA-WebInstance1"
+              #Apacheセットアップ
+              yum -y install httpd mod_ssl php
+              #事故証明書の作成
+              export URLNAME=web.local
+              openssl req -x509 -days 36500 -newkey rsa:2048 -nodes -out server.crt -keyout server.key -subj "/C=JP/ST=Tokyo/L=null/O=null/OU=null/CN=${!URLNAME}/"
+              mv server.key /etc/pki/tls/private
+              mv server.crt /etc/pki/tls/certs
+              #Apacheの自動起動設定と起動
+              systemctl enable --now httpd.service
+              #コンテンツの配置
+              cat > /var/www/html/index.php << EOL
+              <html>
+                <head><title>PHP Sample</title></head>
+                <body><?php echo gethostname(); ?></body>
+              </html>
+              EOL
+  InstanceAutoRecovery1:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CheckAutoRecovery
+    Properties:
+      AlarmDescription: AutoRecovery for the Instance1
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: !Ref AutoRecoveryMinutes
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - !Sub "arn:aws:automate:${AWS::Region}:ec2:recover"
+      - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:admin"
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref Instance1
+  #-----
+  Instance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub ${AmiId}
+      InstanceType: !Sub ${InstanceType}
+      IamInstanceProfile: !Ref InstanceRolePlofile
+      Monitoring: yes
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          SubnetId:
+            Fn::ImportValue: NwfwPoC-SystemAVpc-ResourceSubnet2Id
+          GroupSet:
+            - Fn::ImportValue: NwfwPoC-SystemAVpc-DefaultSecurityGroupId
+            - !Ref WebServerSG
+          AssociatePublicIpAddress: false
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-SystemA-WebInstance2
+      UserData:
+        Fn::Base64: 
+            !Sub |
+              #!/bin/bash -xe
+              # Update ALL rpms, and change hostname to Userfrendly name 
+              yum -y update
+              hostnamectl set-hostname "SystemA-WebInstance2"
+              #Apacheセットアップ
+              yum -y install httpd mod_ssl php
+              #事故証明書の作成
+              export URLNAME=web.local
+              openssl req -x509 -days 36500 -newkey rsa:2048 -nodes -out server.crt -keyout server.key -subj "/C=JP/ST=Tokyo/L=null/O=null/OU=null/CN=${!URLNAME}/"
+              mv server.key /etc/pki/tls/private
+              mv server.crt /etc/pki/tls/certs
+              #Apacheの自動起動設定と起動
+              systemctl enable --now httpd.service
+              #コンテンツの配置
+              cat > /var/www/html/index.php << EOL
+              <html>
+                <head><title>PHP Sample</title></head>
+                <body><?php echo gethostname(); ?></body>
+              </html>
+              EOL
+  InstanceAutoRecovery2:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CheckAutoRecovery
+    Properties:
+      AlarmDescription: AutoRecovery for the Instance2
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: !Ref AutoRecoveryMinutes
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - !Sub "arn:aws:automate:${AWS::Region}:ec2:recover"
+      - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:admin"
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref Instance2
+  #-----
+  Instance3:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub ${AmiId}
+      InstanceType: !Sub ${InstanceType}
+      IamInstanceProfile: !Ref InstanceRolePlofile
+      Monitoring: yes
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          SubnetId:
+            Fn::ImportValue: NwfwPoC-SystemAVpc-ResourceSubnet3Id
+          GroupSet:
+            - Fn::ImportValue: NwfwPoC-SystemAVpc-DefaultSecurityGroupId
+            - !Ref WebServerSG
+          AssociatePublicIpAddress: false
+      Tags:
+        - Key: Name
+          Value: NwfwPoC-SystemA-WebInstance3
+      UserData:
+        Fn::Base64: 
+            !Sub |
+              #!/bin/bash -xe
+              # Update ALL rpms, and change hostname to Userfrendly name 
+              yum -y update
+              hostnamectl set-hostname "SystemA-WebInstance3"
+              #Apacheセットアップ
+              yum -y install httpd mod_ssl php
+              #事故証明書の作成
+              export URLNAME=web.local
+              openssl req -x509 -days 36500 -newkey rsa:2048 -nodes -out server.crt -keyout server.key -subj "/C=JP/ST=Tokyo/L=null/O=null/OU=null/CN=${!URLNAME}/"
+              mv server.key /etc/pki/tls/private
+              mv server.crt /etc/pki/tls/certs
+              #Apacheの自動起動設定と起動
+              systemctl enable --now httpd.service
+              #コンテンツの配置
+              cat > /var/www/html/index.php << EOL
+              <html>
+                <head><title>PHP Sample</title></head>
+                <body><?php echo gethostname(); ?></body>
+              </html>
+              EOL
+  InstanceAutoRecovery3:
+    Type: AWS::CloudWatch::Alarm
+    Condition: CheckAutoRecovery
+    Properties:
+      AlarmDescription: AutoRecovery for the Instance3
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: !Ref AutoRecoveryMinutes
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions:
+      - !Sub "arn:aws:automate:${AWS::Region}:ec2:recover"
+      - !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:admin"
+      Dimensions:
+      - Name: InstanceId
+        Value: !Ref Instance3
+Outputs:
+  #---------------- EC2 Instance
+  Instance1Id:
+    Description:  Instance1 ID
+    Value: !Ref Instance1
+    Export:
+      Name: !Sub ${AWS::StackName}-Instance1Id
+  Instance1PrivateIp:
+    Description:  Instance1 Private IP
+    Value: !GetAtt Instance1.PrivateIp
+    Export:
+      Name: !Sub ${AWS::StackName}-Instance1PrivateIp
+  #--
+  Instance2Id:
+    Description:  Instance2 ID
+    Value: !Ref Instance2
+    Export:
+      Name: !Sub ${AWS::StackName}-Instance2Id
+  Instance2PrivateIp:
+    Description:  Instance2 Private IP
+    Value: !GetAtt Instance2.PrivateIp
+    Export:
+      Name: !Sub ${AWS::StackName}-Instance2PrivateIp
+  #--
+  Instance3Id:
+    Description:  Instance3 ID
+    Value: !Ref Instance3
+    Export:
+      Name: !Sub ${AWS::StackName}-Instance3Id
+  Instance3PrivateIp:
+    Description:  Instance3 Private IP
+    Value: !GetAtt Instance3.PrivateIp
+    Export:
+      Name: !Sub ${AWS::StackName}-Instance3PrivateIp
