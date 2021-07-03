@@ -8,10 +8,13 @@ Resources:
     Properties: 
       AddressFamily: "IPv4"
       MaxEntries: 20
-      PrefixListName: "NwfwPoc-OmpremisPrefixList"
+      PrefixListName: "NwfwPoc-OnpremisPrefixList"
       Tags: 
         - Key: "Name"
-          Value: "NwfwPoc-OmpremisPrefixList"
+          Value: "NwfwPoc-OnpremisPrefixList"
+      Entries:
+        - Cidr: "10.128.0.0/9"
+          Description: "On-Premis CIDR Range"
   VpcsPrefix:
     Type: AWS::EC2::PrefixList
     Properties: 
@@ -20,9 +23,9 @@ Resources:
       PrefixListName: "NwfwPoc-VpcsPrefixList"
       Tags: 
         - Key: "Name"
-          Value: "NwfwPoc-V@csPrefixList"
+          Value: "NwfwPoc-VpcsPrefixList"
       Entries:
-        - Cidr: "10.0.0.0/8"
+        - Cidr: "10.0.0.0/9"
           Description: "VPCs CIDR Range"
 
 Outputs:
