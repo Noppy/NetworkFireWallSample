@@ -310,3 +310,10 @@ aws --profile ${PROFILE} cloudformation create-stack \
     --parameters "${CFN_STACK_PARAMETERS}" \
     --capabilities CAPABILITY_NAMED_IAM ;
 ```
+
+### (5)-(g) NLBの作成
+```shell
+aws --profile ${PROFILE} cloudformation create-stack \
+    --stack-name NwfwPoC-SystemA-Nlb \
+    --template-body "file://./src/SystemA-Vpc/nlb.yaml" ;
+```

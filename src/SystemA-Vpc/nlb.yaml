@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: NLB
+#----------------------------------------------
+Resources:
+  Nlb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: System-A-NLB
+      Type: network
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets: 
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-ElbSubnet1Id
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-ElbSubnet2Id
+        - Fn::ImportValue: NwfwPoC-SystemAVpc-ElbSubnet3Id
+      Tags: 
+        -
+          Key: Name
+          Value: System-A-NLB
+  # IPアドレス指定のターゲットパターン
+  #NlbTargetIPAddress:
+  #  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  #  Properties:
+  #    Name: System-A-NLB-Target-IPAddress
+  #    VpcId:
+  #      Fn::ImportValue: NwfwPoC-SystemAVpc-VpcId
+  #    Protocol: TCP
+  #    Port: 80
+  #    TargetType: ip
+  #    Targets:
+  #      - Id:
+  #          Fn::ImportValue: NwfwPoC-SystemAVpcWebInstance-Instance1PrivateIp
+  #      - Id:
+  #          Fn::ImportValue: NwfwPoC-SystemAVpcWebInstance-Instance2PrivateIp
+  #      - Id:
+  #          Fn::ImportValue: NwfwPoC-SystemAVpcWebInstance-Instance3PrivateIp
+  #
+  # インスタンスID指定のターゲットパターン
+  NlbTargetInstanceId:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: System-A-NLB-Target-InstanceId
+      VpcId:
+        Fn::ImportValue: NwfwPoC-SystemAVpc-VpcId
+      Protocol: TCP
+      Port: 80
+      TargetType: instance
+      Targets:
+        - Id:
+            Fn::ImportValue: NwfwPoC-SystemAVpcWebInstance-Instance1Id
+        - Id:
+            Fn::ImportValue: NwfwPoC-SystemAVpcWebInstance-Instance2Id
+        - Id:
+            Fn::ImportValue: NwfwPoC-SystemAVpcWebInstance-Instance3Id
+  NlbListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref Nlb
+      Protocol: TCP
+      Port: 80
+      DefaultActions:
+        -
+          Type: forward
+          TargetGroupArn: !Ref NlbTargetInstanceId
+#------------------------------------------------------------
+Outputs:
+  NlbDnsName:
+    Description: The DNS name for the NLB. 
+    Value: !GetAtt Nlb.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-NlbDnsName
