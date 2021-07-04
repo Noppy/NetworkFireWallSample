@@ -57,13 +57,13 @@ echo "${PROFILE}  ${REGION}"
 ```
 
 ## (2)Managed Prefix ListとTransitGateway
-### (2)-(a) Managed Prefix List
+### (2)-(a) Managed Prefix List作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-PrefixList \
     --template-body "file://./src/tgw/managed-prefix.yaml";
 ```
-### (2)-(b) ListとTransitGateway
+### (2)-(b) TransitGateway作成
 ```shell
 aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-Tgw \
