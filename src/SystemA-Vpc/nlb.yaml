@@ -13,6 +13,10 @@ Resources:
         - Fn::ImportValue: NwfwPoC-SystemAVpc-ElbSubnet1Id
         - Fn::ImportValue: NwfwPoC-SystemAVpc-ElbSubnet2Id
         - Fn::ImportValue: NwfwPoC-SystemAVpc-ElbSubnet3Id
+      LoadBalancerAttributes:
+        - 
+          Key: load_balancing.cross_zone.enabled
+          Value: 'true'
       Tags: 
         -
           Key: Name
