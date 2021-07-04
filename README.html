@@ -431,12 +431,12 @@ export REGION=$(aws --profile ${PROFILE} configure get region)
 echo "${PROFILE}  ${REGION}"
 </div></code></pre>
 <h2 id="2managed-prefix-list%E3%81%A8transitgateway">(2)Managed Prefix ListとTransitGateway</h2>
-<h3 id="2-a-managed-prefix-list">(2)-(a) Managed Prefix List</h3>
+<h3 id="2-a-managed-prefix-list%E4%BD%9C%E6%88%90">(2)-(a) Managed Prefix List作成</h3>
 <pre class="hljs"><code><div>aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-PrefixList \
     --template-body "file://./src/tgw/managed-prefix.yaml";
 </div></code></pre>
-<h3 id="2-b-list%E3%81%A8transitgateway">(2)-(b) ListとTransitGateway</h3>
+<h3 id="2-b-transitgateway%E4%BD%9C%E6%88%90">(2)-(b) TransitGateway作成</h3>
 <pre class="hljs"><code><div>aws --profile ${PROFILE} cloudformation create-stack \
     --stack-name NwfwPoC-Tgw \
     --template-body "file://./src/tgw/tgw.yaml";
